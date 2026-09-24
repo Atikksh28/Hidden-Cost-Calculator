@@ -1,0 +1,264 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans), 'Geist Fallback';
+  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  color-scheme: light;
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
+  --primary: #5b21b6;
+  --primary-foreground: #ffffff;
+  --secondary: #f59e0b;
+  --secondary-foreground: #1c1917;
+  --muted: #e7e5e4;
+  --muted-foreground: #78716c;
+  --accent: #ff6b35;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --border: #e7e5e4;
+  --input: #e7e5e4;
+  --ring: #5b21b6;
+  --chart-1: #5b21b6;
+  --chart-2: #f59e0b;
+  --chart-3: #ff6b35;
+  --chart-4: #6366f1;
+  --chart-5: #8b5cf6;
+  --radius: 0.75rem;
+  --sidebar: #fafaf9;
+  --sidebar-foreground: #1c1917;
+  --sidebar-primary: #5b21b6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f59e0b;
+  --sidebar-accent-foreground: #1c1917;
+  --sidebar-border: #e7e5e4;
+  --sidebar-ring: #5b21b6;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0f0e0d;
+  --foreground: #f5f5f4;
+  --card: #1c1917;
+  --card-foreground: #f5f5f4;
+  --popover: #1c1917;
+  --popover-foreground: #f5f5f4;
+  --primary: #a78bfa;
+  --primary-foreground: #1c1917;
+  --secondary: #fbbf24;
+  --secondary-foreground: #1c1917;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --accent: #ff8c42;
+  --accent-foreground: #1c1917;
+  --destructive: #ef4444;
+  --border: #292524;
+  --input: #292524;
+  --ring: #a78bfa;
+  --chart-1: #a78bfa;
+  --chart-2: #fbbf24;
+  --chart-3: #ff8c42;
+  --chart-4: #818cf8;
+  --chart-5: #c4b5fd;
+  --sidebar: #1c1917;
+  --sidebar-foreground: #f5f5f4;
+  --sidebar-primary: #a78bfa;
+  --sidebar-primary-foreground: #1c1917;
+  --sidebar-accent: #fbbf24;
+  --sidebar-accent-foreground: #1c1917;
+  --sidebar-border: #292524;
+  --sidebar-ring: #a78bfa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+    --background: #0f0e0d;
+    --foreground: #f5f5f4;
+    --card: #1c1917;
+    --card-foreground: #f5f5f4;
+    --popover: #1c1917;
+    --popover-foreground: #f5f5f4;
+    --primary: #a78bfa;
+    --primary-foreground: #1c1917;
+    --secondary: #fbbf24;
+    --secondary-foreground: #1c1917;
+    --muted: #292524;
+    --muted-foreground: #a8a29e;
+    --accent: #ff8c42;
+    --accent-foreground: #1c1917;
+    --destructive: #ef4444;
+    --border: #292524;
+    --input: #292524;
+    --ring: #a78bfa;
+    --chart-1: #a78bfa;
+    --chart-2: #fbbf24;
+    --chart-3: #ff8c42;
+    --chart-4: #818cf8;
+    --chart-5: #c4b5fd;
+    --sidebar: #1c1917;
+    --sidebar-foreground: #f5f5f4;
+    --sidebar-primary: #a78bfa;
+    --sidebar-primary-foreground: #1c1917;
+    --sidebar-accent: #fbbf24;
+    --sidebar-accent-foreground: #1c1917;
+    --sidebar-border: #292524;
+    --sidebar-ring: #a78bfa;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out;
+  }
+
+  /* Wizard step transitions — applied to the step content wrapper, keyed by
+     step index so React remounts it and the animation replays each step change. */
+  @keyframes step-in-forward {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes step-in-backward {
+    from {
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .step-transition-forward {
+    animation: step-in-forward 0.32s ease-out;
+  }
+
+  .step-transition-backward {
+    animation: step-in-backward 0.32s ease-out;
+  }
+
+  /* Thicker, theme-colored range slider track + thumb (affordability step). */
+  .slider-thick {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--muted);
+    outline: none;
+  }
+
+  .slider-thick::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--muted);
+  }
+
+  .slider-thick::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: -0.375rem;
+    border-radius: 9999px;
+    background: var(--primary);
+    border: 3px solid var(--card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+  }
+
+  .slider-thick::-moz-range-track {
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--muted);
+  }
+
+  .slider-thick::-moz-range-thumb {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background: var(--primary);
+    border: 3px solid var(--card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+  }
+}
