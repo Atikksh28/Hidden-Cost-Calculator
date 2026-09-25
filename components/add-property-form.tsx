@@ -8,7 +8,6 @@ import type { OnboardingData } from '@/components/conversational-onboarding'
 import {
   getStayMonths,
   getCostPerKm,
-  getCommuteDistanceKm,
   getNumberOfPeople,
 } from '@/lib/onboarding-mappings'
 import { calculateTrueCost, type TrueCostBreakdown } from '@/lib/calculate-true-cost'
@@ -59,6 +58,13 @@ interface AddPropertyFormProps {
   onboardingData: OnboardingData
 }
 
+/** Blank or invalid (NaN/negative) -> null, so callers can treat "not filled in" as a validation failure. */
+function parseNonNegative(value: string): number | null {
+  if (value.trim() === '') return null
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
 export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyFormProps) {
   const { user } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
@@ -71,6 +77,10 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
     parking: '',
     furnishing: '',
     registration: '',
+    // Rent-only: per-property answers (NOT from onboarding, these differ for every property)
+    parkingMode: '' as '' | 'included' | 'not_included' | 'not_needed',
+    furnishingMode: '' as '' | 'furnished' | 'unfurnished',
+    commuteDistanceKm: '',
     // Rent-only (new)
     deposit: '',
     brokerage: '',
@@ -84,13 +94,6 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
   })
 
   const isRent = formData.type === 'Rent'
-
-  // Parking is only asked about when the onboarding answer says it isn't
-  // included with the place — otherwise it's assumed folded into rent/maintenance.
-  const parkingRequired = onboardingData.parking === 'not_included'
-  // Furnishing cost is only relevant if the place isn't already fully furnished.
-  const furnishingRequired =
-    onboardingData.furnishing === 'unfurnished' || onboardingData.furnishing === 'semi_furnished'
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -162,9 +165,6 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
     const rent = formData.rent ? parseInt(formData.rent) : null
     const maintenance = formData.maintenance ? parseInt(formData.maintenance) : null
     const deposit = formData.deposit ? parseInt(formData.deposit) : null
-    const parking = parkingRequired ? (formData.parking ? parseInt(formData.parking) : null) : 0
-    const furnishing = furnishingRequired ? (formData.furnishing ? parseInt(formData.furnishing) : null) : 0
-
     if (!formData.location.trim()) {
       alert('Location is required')
       return
@@ -181,12 +181,38 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       alert('Deposit is required')
       return
     }
-    if (parkingRequired && parking === null) {
-      alert('Parking cost is required since your onboarding answer said parking isn’t included')
+    // Per-property answers, entered fresh on every property (never from onboarding).
+    if (!formData.parkingMode) {
+      alert('Select whether parking is included, not included, or not needed')
       return
     }
-    if (furnishingRequired && furnishing === null) {
-      alert('Furnishing cost is required for an unfurnished/semi-furnished place')
+    let parking = 0 // "Included" and "Don't need it" both cost 0
+    if (formData.parkingMode === 'not_included') {
+      const cost = parseNonNegative(formData.parking)
+      if (cost === null) {
+        alert('Monthly parking cost is required when parking is not included')
+        return
+      }
+      parking = cost
+    }
+
+    if (!formData.furnishingMode) {
+      alert('Select whether the property is furnished or unfurnished')
+      return
+    }
+    let furnishing = 0 // "Furnished" costs 0
+    if (formData.furnishingMode === 'unfurnished') {
+      const cost = parseNonNegative(formData.furnishing)
+      if (cost === null) {
+        alert('Furnishing/setup cost is required when the property is unfurnished')
+        return
+      }
+      furnishing = cost
+    }
+
+    const commuteDistanceKm = parseNonNegative(formData.commuteDistanceKm)
+    if (commuteDistanceKm === null) {
+      alert('Commute distance (km) is required')
       return
     }
 
@@ -200,19 +226,15 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
 
     const stayMonths = getStayMonths(onboardingData.stayDuration, onboardingData.stayDurationCustom)
     const costPerKm = getCostPerKm(onboardingData.commuteMethod)
-    const commuteDistanceKm = getCommuteDistanceKm(
-      onboardingData.commuteDistance,
-      onboardingData.commuteDistanceCustom
-    )
     const numberOfPeople = getNumberOfPeople(onboardingData.occupancy, onboardingData.occupancyCustom)
 
     const result = calculateTrueCost({
       rent,
       maintenance,
-      parking: parking ?? 0,
+      parking,
       deposit,
       brokerage,
-      furnishing: furnishing ?? 0,
+      furnishing,
       moving,
       agreementCharges,
       utilities,
@@ -230,10 +252,10 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       type: 'Rent',
       rent,
       maintenance,
-      parking: parking ?? 0,
+      parking,
       commute: null,
       schoolTransport: null,
-      furnishing: furnishing ?? 0,
+      furnishing,
       repairs: null,
       additionalCharges: null,
       registration: agreementCharges,
@@ -356,42 +378,111 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
                 />
               </div>
 
-              {/* Parking: only asked about (Rent) when onboarding said it isn't included */}
-              {(!isRent || parkingRequired) && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Parking {isRent && parkingRequired && '*'}
-                  </label>
-                  <input
-                    type="number"
-                    name="parking"
-                    value={formData.parking}
-                    onChange={handleInputChange}
-                    placeholder="₹"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  />
-                </div>
-              )}
-
-              {/* Furnishing: only asked about (Rent) when onboarding said unfurnished/semi-furnished */}
-              {(!isRent || furnishingRequired) && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Furnishing {isRent && furnishingRequired && '*'}
-                  </label>
-                  <input
-                    type="number"
-                    name="furnishing"
-                    value={formData.furnishing}
-                    onChange={handleInputChange}
-                    placeholder="₹"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  />
-                </div>
+              {/* EMI keeps its plain numeric parking/furnishing inputs (legacy flat-sum model) */}
+              {!isRent && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Parking</label>
+                    <input
+                      type="number"
+                      name="parking"
+                      value={formData.parking}
+                      onChange={handleInputChange}
+                      placeholder="₹"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Furnishing</label>
+                    <input
+                      type="number"
+                      name="furnishing"
+                      value={formData.furnishing}
+                      onChange={handleInputChange}
+                      placeholder="₹"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                    />
+                  </div>
+                </>
               )}
 
               {isRent && (
                 <>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Parking *</label>
+                    <select
+                      name="parkingMode"
+                      value={formData.parkingMode}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                    >
+                      <option value="" disabled>Select…</option>
+                      <option value="included">Included</option>
+                      <option value="not_included">Not included</option>
+                      <option value="not_needed">Don&apos;t need it</option>
+                    </select>
+                  </div>
+
+                  {formData.parkingMode === 'not_included' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Monthly parking cost (₹) *</label>
+                      <input
+                        type="number"
+                        name="parking"
+                        min={0}
+                        value={formData.parking}
+                        onChange={handleInputChange}
+                        placeholder="₹"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Furnishing *</label>
+                    <select
+                      name="furnishingMode"
+                      value={formData.furnishingMode}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                    >
+                      <option value="" disabled>Select…</option>
+                      <option value="furnished">Furnished</option>
+                      <option value="unfurnished">Unfurnished</option>
+                    </select>
+                  </div>
+
+                  {formData.furnishingMode === 'unfurnished' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Furnishing/setup cost (₹, one-time) *</label>
+                      <input
+                        type="number"
+                        name="furnishing"
+                        min={0}
+                        value={formData.furnishing}
+                        onChange={handleInputChange}
+                        placeholder="₹"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Commute distance from this property (km) *
+                    </label>
+                    <input
+                      type="number"
+                      name="commuteDistanceKm"
+                      min={0}
+                      step="any"
+                      value={formData.commuteDistanceKm}
+                      onChange={handleInputChange}
+                      placeholder="km"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium mb-2">Deposit *</label>
                     <input

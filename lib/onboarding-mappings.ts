@@ -45,28 +45,6 @@ export function getCostPerKm(commuteMethod: OnboardingData['commuteMethod']): nu
   }
 }
 
-/** Daily one-way(ish) commute distance bucket, in km. */
-export function getCommuteDistanceKm(
-  commuteDistance: OnboardingData['commuteDistance'],
-  customKm: number | null
-): number {
-  switch (commuteDistance) {
-    case '5km':
-      return 5
-    case '10km':
-      return 10
-    case '20km':
-      return 20
-    case 'other':
-      if (typeof customKm === 'number' && Number.isFinite(customKm) && customKm > 0) {
-        return customKm
-      }
-      return 10
-    default:
-      return 10
-  }
-}
-
 /** Number of people the true cost should be split across. */
 export function getNumberOfPeople(
   occupancy: OnboardingData['occupancy'],

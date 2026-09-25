@@ -82,7 +82,7 @@ function HomeContent() {
     setVisiblePropertyIds((prev) => prev.filter((pid) => pid !== id))
   }
 
-  const handleAffordabilityUpdate = useCallback((ranges: { safe: number; stretch: number }) => {
+  const handleAffordabilityUpdate = useCallback((ranges: { safe: number; stretch: number } | null) => {
     setAffordabilityRanges(ranges)
   }, [])
 

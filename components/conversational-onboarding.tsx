@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Navigation, Route, ParkingCircle, Sofa, Users } from 'lucide-react'
+import { Clock, Navigation, Users } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types — `OnboardingData` is exported so it can be imported by
@@ -15,9 +15,6 @@ import { Clock, Navigation, Route, ParkingCircle, Sofa, Users } from 'lucide-rea
 
 export type StayDurationAnswer = 'lt_1_year' | '1_2_years' | '2_3_years' | 'other'
 export type CommuteMethodAnswer = 'walk_cycle' | 'public_transport' | 'two_wheeler' | 'car' | 'cab_pooled'
-export type CommuteDistanceAnswer = '5km' | '10km' | '20km' | 'other'
-export type ParkingAnswer = 'included_covered' | 'included_open' | 'not_included'
-export type FurnishingAnswer = 'fully_furnished' | 'semi_furnished' | 'unfurnished'
 export type OccupancyAnswer = 'alone' | 'split_1' | 'split_2plus'
 
 export interface OnboardingData {
@@ -25,11 +22,6 @@ export interface OnboardingData {
   /** Number of years, only populated when stayDuration === 'other' */
   stayDurationCustom: number | null
   commuteMethod: CommuteMethodAnswer | null
-  commuteDistance: CommuteDistanceAnswer | null
-  /** Km, only populated when commuteDistance === 'other' */
-  commuteDistanceCustom: number | null
-  parking: ParkingAnswer | null
-  furnishing: FurnishingAnswer | null
   occupancy: OccupancyAnswer | null
   /** Total people (including the user), only populated when occupancy === 'split_2plus' */
   occupancyCustom: number | null
@@ -39,10 +31,6 @@ export const initialOnboardingData: OnboardingData = {
   stayDuration: null,
   stayDurationCustom: null,
   commuteMethod: null,
-  commuteDistance: null,
-  commuteDistanceCustom: null,
-  parking: null,
-  furnishing: null,
   occupancy: null,
   occupancyCustom: null,
 }
@@ -110,47 +98,6 @@ const QUESTIONS: QuestionConfig[] = [
       { value: 'two_wheeler', label: 'Own two-wheeler' },
       { value: 'car', label: 'Own car' },
       { value: 'cab_pooled', label: 'Cab or pooled ride' },
-    ],
-  },
-  {
-    id: 'commuteDistance',
-    icon: Route,
-    question: 'Roughly how far is your daily commute in total?',
-    helper: 'Paired with the previous answer, gives a commute cost bucket without asking for an exact number.',
-    options: [
-      { value: '5km', label: '~5 km' },
-      { value: '10km', label: '~10 km' },
-      { value: '20km', label: '~20 km' },
-      { value: 'other', label: 'Other' },
-    ],
-    followUp: {
-      forValue: 'other',
-      fieldId: 'commuteDistanceCustom',
-      label: 'Roughly how many km (round trip)?',
-      placeholder: 'e.g. 35',
-      unit: 'km',
-    },
-  },
-  {
-    id: 'parking',
-    icon: ParkingCircle,
-    question: 'Is parking included with this place?',
-    helper: 'Feeds the parking cost line — a commonly missed hidden cost.',
-    options: [
-      { value: 'included_covered', label: 'Included, covered' },
-      { value: 'included_open', label: 'Included, open only' },
-      { value: 'not_included', label: "Not included — I'll need to arrange it" },
-    ],
-  },
-  {
-    id: 'furnishing',
-    icon: Sofa,
-    question: "What's the furnishing status of the property?",
-    helper: 'Determines the one-time furnishing/setup cost, amortized over the stay duration.',
-    options: [
-      { value: 'fully_furnished', label: 'Fully furnished' },
-      { value: 'semi_furnished', label: 'Semi-furnished' },
-      { value: 'unfurnished', label: 'Unfurnished' },
     ],
   },
   {
@@ -262,7 +209,7 @@ export function ConversationalOnboarding({ onComplete }: ConversationalOnboardin
             Quick chat before we crunch the numbers
           </h2>
           <p className="text-foreground/60 text-xs md:text-sm">
-            6 quick questions — tap an answer and we&apos;ll move straight to the next one.
+            {QUESTIONS.length} quick questions — tap an answer and we&apos;ll move straight to the next one.
           </p>
         </div>
 

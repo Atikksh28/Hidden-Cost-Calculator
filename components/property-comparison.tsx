@@ -132,6 +132,15 @@ const STATUS_STYLES: Record<
   },
 }
 
+// Shown when there's no income to judge against ("prefer not to say"): no
+// Safe/Stretch/Risky claim, just a plain card.
+const NEUTRAL_STYLES = {
+  border: 'border-border',
+  tint: '',
+  headerGradient: 'from-primary/10 to-accent/10',
+  totalText: 'text-primary',
+}
+
 /**
  * Rent properties added since the true-cost calculator went in carry a
  * `trueCostBreakdown` (rent/maintenance/parking/commuteCost/amortizedOneTime/
@@ -269,10 +278,12 @@ export function PropertyComparison({
             {filteredProperties.map((property) => {
               const biggestHiddenCost = findBiggestHiddenCost(property)
               const isLowestCost = property.totalMonthly === minTotalCost
+              // No ranges (income not provided) -> no status at all, rather than
+              // a stale mock status or a default of "Safe".
               const status = affordabilityRanges
                 ? getAffordabilityStatus(property.totalMonthly, affordabilityRanges)
-                : ((property.status as 'Safe' | 'Stretch' | 'Risky') || 'Safe')
-              const styles = STATUS_STYLES[status]
+                : null
+              const styles = status ? STATUS_STYLES[status] : NEUTRAL_STYLES
 
               return (
                 <div key={property.id} className="relative">
@@ -295,9 +306,11 @@ export function PropertyComparison({
                         </div>
                         {/* Status badge, stacked above the type label, top-right */}
                         <div className="flex flex-col items-end gap-1 shrink-0">
-                          <Badge variant="secondary" className={`${styles.badge} text-[11px] px-2 py-0`}>
-                            {status}
-                          </Badge>
+                          {status && (
+                            <Badge variant="secondary" className={`${STATUS_STYLES[status].badge} text-[11px] px-2 py-0`}>
+                              {status}
+                            </Badge>
+                          )}
                           <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[11px] px-2 py-0">
                             {property.type}
                           </Badge>

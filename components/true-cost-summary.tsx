@@ -72,7 +72,9 @@ export function TrueCostSummary({ customProperties, affordabilityRanges }: TrueC
 
   const hiddenCostIncreasePercent =
     breakdown.rent > 0 ? Math.round(((property.totalMonthly - breakdown.rent) / breakdown.rent) * 100) : 0
-  const status = getAffordabilityStatus(property.totalMonthly, affordabilityRanges)
+  // No ranges (income not provided) -> no status, rather than judging against
+  // hardcoded fallback thresholds.
+  const status = affordabilityRanges ? getAffordabilityStatus(property.totalMonthly, affordabilityRanges) : null
 
   return (
     <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
@@ -179,13 +181,17 @@ export function TrueCostSummary({ customProperties, affordabilityRanges }: TrueC
                 </p>
               </div>
 
-              <div className={`p-4 rounded-lg border ${statusStyles[status]}`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  status ? statusStyles[status] : 'bg-muted/50 border-border text-muted-foreground'
+                }`}
+              >
                 <p className="text-sm text-muted-foreground mb-2">Affordability Status</p>
-                <p className="text-xl font-bold">{status}</p>
+                <p className="text-xl font-bold">{status ?? 'Not available'}</p>
                 <p className="text-xs">
                   {affordabilityRanges
                     ? `Safe up to ${formatIndianCurrency(affordabilityRanges.safe)}, Stretch up to ${formatIndianCurrency(affordabilityRanges.stretch)}`
-                    : 'Set your income in the Affordability step above for a personalized threshold'}
+                    : 'Add your income in the Profile step to see this'}
                 </p>
               </div>
             </div>

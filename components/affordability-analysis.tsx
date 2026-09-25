@@ -5,49 +5,47 @@ import { Card } from '@/components/ui/card'
 import { AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
 
 interface AffordabilityAnalysisProps {
-  onAffordabilityUpdate?: (ranges: { safe: number; stretch: number }) => void
+  onAffordabilityUpdate?: (ranges: { safe: number; stretch: number } | null) => void
 }
 
 export function AffordabilityAnalysis({ onAffordabilityUpdate }: AffordabilityAnalysisProps) {
   const [income, setIncome] = useState(150000)
   const [existingEmis, setExistingEmis] = useState(25000)
   const [savingsGoal, setSavingsGoal] = useState(30000)
-  const [familyMembers, setFamilyMembers] = useState(4)
 
   // Track which fields user prefers not to disclose
   const [hideIncome, setHideIncome] = useState(false)
   const [hideEmis, setHideEmis] = useState(false)
   const [hideSavings, setHideSavings] = useState(false)
 
-  // Calculate only with available data
-  const safeBudget = !hideIncome ? Math.max(0, income * 0.3) : null
-  const stretchBudget = !hideIncome ? Math.max(0, income * 0.4) : null
+  // What's left of income after EMIs and savings. A field marked "prefer not
+  // to say" counts as 0. Null when income itself is hidden — there's no honest
+  // number to show without it.
+  const expendableIncome = hideIncome
+    ? null
+    : income - (hideEmis ? 0 : existingEmis) - (hideSavings ? 0 : savingsGoal)
 
-  // Emit affordability ranges when they change
+  // The 30% / 40% rule is applied to total monthly income (not to what's left
+  // after obligations). Income hidden -> null, so no status is judged at all.
+  const safeBudget = hideIncome ? null : income * 0.3
+  const stretchBudget = hideIncome ? null : income * 0.4
+
+  // Emit affordability ranges when they change. `null` when income is hidden,
+  // so the parent clears its stored ranges instead of keeping stale ones.
   useEffect(() => {
-    if (safeBudget !== null && stretchBudget !== null && onAffordabilityUpdate) {
-      onAffordabilityUpdate({
-        safe: safeBudget,
-        stretch: stretchBudget,
-      })
+    if (!onAffordabilityUpdate) return
+    if (safeBudget !== null && stretchBudget !== null) {
+      onAffordabilityUpdate({ safe: safeBudget, stretch: stretchBudget })
+    } else {
+      onAffordabilityUpdate(null)
     }
   }, [safeBudget, stretchBudget, onAffordabilityUpdate])
 
-  const availableForHousing = !hideIncome || !hideEmis || !hideSavings
-    ? (hideIncome ? 0 : income) - (hideEmis ? 0 : existingEmis) - (hideSavings ? 0 : savingsGoal)
-    : null
-
-  // No property has been picked yet at this point in the wizard (that's Step 3),
-  // so these summary metrics are self-contained — derived only from income/EMI/
-  // savings/family inputs, never from any property's trueMonthlyCost. The actual
-  // "this property's cost vs. your budget" comparison happens later in the
-  // Results step, once a real trueMonthlyCost exists to compare against.
-  const pctOfIncomeAvailable =
-    !hideIncome && income > 0 && availableForHousing !== null
-      ? Math.max(0, (availableForHousing / income) * 100)
-      : null
-  const perPersonBudget =
-    availableForHousing !== null ? availableForHousing / familyMembers : null
+  // Self-contained: derived only from the income/EMI/savings inputs, never
+  // from any property's trueMonthlyCost. Each property's cost is compared to
+  // the 30%/40% limits later, in Comparison and Results.
+  const expendablePct =
+    expendableIncome !== null && income > 0 ? Math.max(0, (expendableIncome / income) * 100) : null
 
   const hasFullData = !hideIncome && !hideEmis && !hideSavings
 
@@ -99,50 +97,28 @@ export function AffordabilityAnalysis({ onAffordabilityUpdate }: AffordabilityAn
               onToggleHidden={setHideSavings}
             />
 
-            <div>
-              <label className="block text-base font-semibold text-foreground mb-2">
-                Family Members
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5, 6].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => setFamilyMembers(num)}
-                    className={`h-10 w-10 rounded-lg text-base font-semibold transition-all ${
-                      familyMembers === num
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground hover:bg-muted/80'
-                    }`}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3-metric summary row */}
+            {/* Summary row */}
             <div className="border-t border-border pt-5">
               <h4 className="text-base font-semibold text-foreground mb-3">Key Metrics</h4>
-              {availableForHousing === null ? (
+              {expendableIncome === null ? (
                 <div className="p-4 bg-muted/50 rounded-lg border border-muted text-center">
                   <p className="text-muted-foreground text-sm">
-                    Please provide at least one financial metric to see key metrics
+                    Income is required to calculate your expendable income
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
-                  <MetricTile label="Available for Housing" value={`₹${Math.round(availableForHousing).toLocaleString()}`} />
+                <div className="grid grid-cols-2 gap-3">
                   <MetricTile
-                    label="% of Income"
-                    value={pctOfIncomeAvailable !== null ? `${pctOfIncomeAvailable.toFixed(0)}%` : '—'}
+                    label="Expendable Income Remaining"
+                    value={`₹${Math.round(expendableIncome).toLocaleString()}`}
                   />
                   <MetricTile
-                    label="Per Person"
-                    value={perPersonBudget !== null ? `₹${Math.round(perPersonBudget).toLocaleString()}` : '—'}
+                    label="% of Income"
+                    value={expendablePct !== null ? `${expendablePct.toFixed(0)}%` : '—'}
                   />
                 </div>
               )}
-              {!hasFullData && availableForHousing !== null && (
+              {!hasFullData && expendableIncome !== null && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-3">
                   Some fields are hidden — provide full details for a complete picture.
                 </p>
@@ -179,26 +155,36 @@ export function AffordabilityAnalysis({ onAffordabilityUpdate }: AffordabilityAn
                     tone="red"
                     label="Risky"
                     value={`> ₹${stretchBudget?.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                    hint="Over 40%"
+                    hint="Over 40% of income"
                   />
                 </div>
 
-                {pctOfIncomeAvailable !== null && (
+                {expendableIncome !== null && expendableIncome <= 0 && (
+                  <div className="mb-4 p-3 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30">
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      Your EMIs and savings goal meet or exceed your income, leaving no expendable income.
+                      The limits below are based on total income, so check you have a cushion before
+                      committing to any rent.
+                    </p>
+                  </div>
+                )}
+
+                {expendablePct !== null && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-semibold text-foreground">
-                        Your budget headroom vs. the 30% / 40% thresholds
+                        Your expendable income vs. the 30% / 40% limits
                       </h4>
                       <span className="text-sm font-bold text-primary">
-                        {pctOfIncomeAvailable.toFixed(0)}% of income free
+                        {expendablePct.toFixed(0)}% of income remaining
                       </span>
                     </div>
-                    <AllocationBar percent={pctOfIncomeAvailable} />
+                    <AllocationBar safePct={30} stretchPct={40} freePct={expendablePct} />
                     <p className="text-xs text-muted-foreground mt-2">
-                      This shows how much of your income is left after EMIs and savings — the most housing
-                      cost could take before eating into that. It isn&apos;t tied to any specific property yet;
-                      each property&apos;s actual cost gets checked against these same 30%/40% thresholds once
-                      you pick one in Results.
+                      Safe and Stretch are 30% and 40% of your total monthly income. The marker shows how
+                      much of your income is left after EMIs and savings. It isn&apos;t tied to any specific
+                      property yet — each property&apos;s actual cost is checked against these limits in
+                      Comparison and Results.
                     </p>
                   </div>
                 )}
@@ -328,27 +314,47 @@ function RangeCard({
   )
 }
 
-/** Visual bar: green 0-30%, amber 30-40%, red 40%+, with a marker at `percent`. */
-function AllocationBar({ percent }: { percent: number }) {
-  const clampedMarker = Math.min(percent, 100)
+/**
+ * Visual bar over 0-100% of income: green up to the Safe limit, amber up to
+ * the Stretch limit, red beyond. The marker sits at the total left after
+ * EMIs/savings (the ceiling that Safe/Stretch are 30%/40% of).
+ */
+function AllocationBar({
+  safePct,
+  stretchPct,
+  freePct,
+}: {
+  safePct: number
+  stretchPct: number
+  freePct: number
+}) {
+  const clamp = (n: number) => Math.min(Math.max(n, 0), 100)
+  const safe = clamp(safePct)
+  const stretch = clamp(stretchPct)
+  const marker = clamp(freePct)
   return (
-    <div className="relative pt-3">
+    <div className="relative pt-3 pb-4">
       <div className="h-3 rounded-full overflow-hidden flex">
-        <div className="bg-green-400 dark:bg-green-600" style={{ width: '30%' }} />
-        <div className="bg-amber-400 dark:bg-amber-600" style={{ width: '10%' }} />
-        <div className="bg-red-400 dark:bg-red-600" style={{ width: '60%' }} />
+        <div className="bg-green-400 dark:bg-green-600" style={{ width: `${safe}%` }} />
+        <div className="bg-amber-400 dark:bg-amber-600" style={{ width: `${stretch - safe}%` }} />
+        <div className="bg-red-400 dark:bg-red-600" style={{ width: `${100 - stretch}%` }} />
       </div>
-      <div
-        className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
-        style={{ left: `${clampedMarker}%` }}
-      >
+      <div className="absolute top-0 -translate-x-1/2" style={{ left: `${marker}%` }}>
         <div className="w-0.5 h-3 bg-foreground" />
       </div>
-      <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-        <span>0%</span>
-        <span className="absolute" style={{ left: '30%', transform: 'translateX(-50%)' }}>30%</span>
-        <span className="absolute" style={{ left: '40%', transform: 'translateX(-50%)' }}>40%</span>
-        <span>100%</span>
+      <div className="relative h-3 mt-1 text-[10px] text-muted-foreground">
+        <span className="absolute left-0">0%</span>
+        {safe > 0 && (
+          <span className="absolute" style={{ left: `${safe}%`, transform: 'translateX(-50%)' }}>
+            Safe {safePct.toFixed(0)}%
+          </span>
+        )}
+        {stretch > safe && (
+          <span className="absolute top-3" style={{ left: `${stretch}%`, transform: 'translateX(-50%)' }}>
+            Stretch {stretchPct.toFixed(0)}%
+          </span>
+        )}
+        <span className="absolute right-0">100%</span>
       </div>
     </div>
   )

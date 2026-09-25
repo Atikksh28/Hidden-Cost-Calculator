@@ -45,6 +45,7 @@ interface PropertyRow {
   furnishing: number | null
   moving: number | null
   agreement_charges: number | null
+  utilities: number | null
   stay_months: number | null
   cost_per_km: number | null
   commute_distance_km: number | null
@@ -58,10 +59,10 @@ interface PropertyRow {
  * a Supabase row. `totalMonthly`/`costPerPerson` always come straight from
  * the stored columns (authoritative). The breakdown's individual lines are
  * recomputed via the same calculateTrueCost() used everywhere else — no calc
- * logic duplicated — EXCEPT `utilities`, which this table has no column for;
- * it's treated as 0 here, so a property saved with nonzero utilities will
- * show breakdown rows that sum to slightly less than the stored total once
- * reloaded from Supabase. Known, bounded gap — see the Step 1 audit.
+ * logic duplicated — from the stored inputs, including `utilities`, so the
+ * breakdown sums back to the stored total. Rows saved before the `utilities`
+ * column existed read back as 0 (the column default), which is correct for
+ * them: nothing was ever stored.
  */
 function rowToProperty(row: PropertyRow): CustomProperty {
   const result = calculateTrueCost({
@@ -73,7 +74,7 @@ function rowToProperty(row: PropertyRow): CustomProperty {
     furnishing: row.furnishing ?? 0,
     moving: row.moving ?? 0,
     agreementCharges: row.agreement_charges ?? 0,
-    utilities: 0,
+    utilities: row.utilities ?? 0,
     stayMonths: row.stay_months ?? 0,
     commuteDistanceKm: row.commute_distance_km ?? 0,
     costPerKm: row.cost_per_km ?? 0,
@@ -98,7 +99,7 @@ function rowToProperty(row: PropertyRow): CustomProperty {
     deposit: row.deposit,
     brokerage: row.brokerage,
     moving: row.moving,
-    utilities: null,
+    utilities: row.utilities ?? 0,
     costPerPerson: row.cost_per_person ?? result.costPerPerson,
     trueCostBreakdown: result.breakdown,
     stayMonths: row.stay_months,
@@ -121,6 +122,7 @@ function propertyToInsertPayload(property: CustomProperty, userId: string) {
     furnishing: property.furnishing,
     moving: property.moving,
     agreement_charges: property.registration,
+    utilities: property.utilities ?? 0,
     stay_months: property.stayMonths,
     cost_per_km: property.costPerKm,
     commute_distance_km: property.commuteDistanceKm,
