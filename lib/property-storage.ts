@@ -52,6 +52,8 @@ interface PropertyRow {
   number_of_people: number | null
   true_monthly_cost: number | null
   cost_per_person: number | null
+  carpet_area_sqft: number | null
+  bhk: number | null
 }
 
 /**
@@ -106,6 +108,8 @@ function rowToProperty(row: PropertyRow): CustomProperty {
     costPerKm: row.cost_per_km,
     commuteDistanceKm: row.commute_distance_km,
     numberOfPeople: row.number_of_people,
+    carpetAreaSqft: row.carpet_area_sqft,
+    bhk: row.bhk,
   }
 }
 
@@ -129,6 +133,8 @@ function propertyToInsertPayload(property: CustomProperty, userId: string) {
     number_of_people: property.numberOfPeople,
     true_monthly_cost: property.totalMonthly,
     cost_per_person: property.costPerPerson,
+    carpet_area_sqft: property.carpetAreaSqft,
+    bhk: property.bhk,
   }
 }
 

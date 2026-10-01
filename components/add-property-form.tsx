@@ -14,6 +14,19 @@ import { calculateTrueCost, type TrueCostBreakdown } from '@/lib/calculate-true-
 import { saveProperty } from '@/lib/property-storage'
 import { useAuth } from '@/context/auth-context'
 
+interface ExtractedListing {
+  propertyName: string | null
+  city: string | null
+  rent: number | null
+  deposit: number | null
+  maintenance: number | null
+  brokerage: number | null
+  furnishingStatus: 'Furnished' | 'Semi-furnished' | 'Unfurnished' | null
+  parkingStatus: 'Included' | 'Not included' | null
+  carpetAreaSqft: number | null
+  bhk: number | null
+}
+
 export interface CustomProperty {
   id: string
   name: string
@@ -49,6 +62,9 @@ export interface CustomProperty {
   costPerKm: number | null
   commuteDistanceKm: number | null
   numberOfPeople: number | null
+  // Optional descriptive metadata — not used by calculateTrueCost, just shown/stored alongside the property.
+  carpetAreaSqft: number | null
+  bhk: number | null
 }
 
 interface AddPropertyFormProps {
@@ -65,9 +81,32 @@ function parseNonNegative(value: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null
 }
 
+function fieldClassName(autoFilled: boolean): string {
+  return `w-full px-3 py-2 border rounded-lg bg-background text-foreground ${
+    autoFilled ? 'border-primary ring-1 ring-primary/30' : 'border-border'
+  }`
+}
+
+/** STEP 6: marks a field that extraction successfully pre-filled, so the user knows to double-check it. */
+function AutoFilledBadge({ show }: { show: boolean }) {
+  if (!show) return null
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
+      Auto-filled
+    </span>
+  )
+}
+
 export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyFormProps) {
   const { user } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
+  const [entryMode, setEntryMode] = useState<'manual' | 'paste'>('manual')
+  const [listingText, setListingText] = useState('')
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [extractError, setExtractError] = useState<string | null>(null)
+  // Field names successfully pre-filled by extraction, for the STEP 6 "check this" indicator.
+  // Cleared per-field the moment the user edits that field (it's their value now, not the model's).
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -79,8 +118,10 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
     registration: '',
     // Rent-only: per-property answers (NOT from onboarding, these differ for every property)
     parkingMode: '' as '' | 'included' | 'not_included' | 'not_needed',
-    furnishingMode: '' as '' | 'furnished' | 'unfurnished',
+    furnishingMode: '' as '' | 'furnished' | 'semi_furnished' | 'unfurnished',
     commuteDistanceKm: '',
+    carpetAreaSqft: '',
+    bhk: '',
     // Rent-only (new)
     deposit: '',
     brokerage: '',
@@ -101,6 +142,94 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       ...prev,
       [name]: value,
     }))
+    if (autoFilledFields.has(name)) {
+      setAutoFilledFields((prev) => {
+        const next = new Set(prev)
+        next.delete(name)
+        return next
+      })
+    }
+  }
+
+  const handleExtract = async () => {
+    if (!listingText.trim() || isExtracting) return
+    setIsExtracting(true)
+    setExtractError(null)
+    try {
+      const res = await fetch('/api/extract-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingText }),
+      })
+      if (!res.ok) throw new Error('extraction request failed')
+      const data: ExtractedListing = await res.json()
+
+      const filled = new Set<string>()
+      setFormData((prev) => {
+        const next = { ...prev }
+        if (data.propertyName) {
+          next.name = data.propertyName
+          filled.add('name')
+        }
+        if (data.city) {
+          next.location = data.city
+          filled.add('location')
+        }
+        if (data.rent !== null) {
+          next.rent = String(data.rent)
+          filled.add('rent')
+        }
+        if (data.deposit !== null) {
+          next.deposit = String(data.deposit)
+          filled.add('deposit')
+        }
+        if (data.maintenance !== null) {
+          next.maintenance = String(data.maintenance)
+          filled.add('maintenance')
+        }
+        if (data.brokerage !== null) {
+          next.brokerage = String(data.brokerage)
+          filled.add('brokerage')
+        }
+        if (
+          data.furnishingStatus === 'Furnished' ||
+          data.furnishingStatus === 'Semi-furnished' ||
+          data.furnishingStatus === 'Unfurnished'
+        ) {
+          next.furnishingMode =
+            data.furnishingStatus === 'Furnished'
+              ? 'furnished'
+              : data.furnishingStatus === 'Semi-furnished'
+                ? 'semi_furnished'
+                : 'unfurnished'
+          filled.add('furnishingMode')
+        }
+        if (data.carpetAreaSqft !== null) {
+          next.carpetAreaSqft = String(data.carpetAreaSqft)
+          filled.add('carpetAreaSqft')
+        }
+        if (data.bhk !== null) {
+          next.bhk = String(data.bhk)
+          filled.add('bhk')
+        }
+        if (data.parkingStatus === 'Included' || data.parkingStatus === 'Not included') {
+          next.parkingMode = data.parkingStatus === 'Included' ? 'included' : 'not_included'
+          filled.add('parkingMode')
+        }
+        return next
+      })
+      // Parking/furnishing COST and commute distance are never part of extraction
+      // (STEP 3's prompt explicitly excludes them) — those stay empty, required,
+      // normal-looking fields, same as plain manual entry.
+      setAutoFilledFields(filled)
+      setEntryMode('manual')
+    } catch (error) {
+      console.error('[AddPropertyForm] extraction failed:', error)
+      setExtractError("Couldn't read that listing — please fill the form manually.")
+      setEntryMode('manual')
+    } finally {
+      setIsExtracting(false)
+    }
   }
 
   const handleSubmitEmi = async () => {
@@ -152,6 +281,8 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       costPerKm: null,
       commuteDistanceKm: null,
       numberOfPeople: null,
+      carpetAreaSqft: parseNonNegative(formData.carpetAreaSqft),
+      bhk: parseNonNegative(formData.bhk),
     }
 
     // EMI always goes to localStorage regardless of login — the Supabase
@@ -197,7 +328,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
     }
 
     if (!formData.furnishingMode) {
-      alert('Select whether the property is furnished or unfurnished')
+      alert('Select the furnishing status')
       return
     }
     let furnishing = 0 // "Furnished" costs 0
@@ -208,7 +339,15 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
         return
       }
       furnishing = cost
+    } else if (formData.furnishingMode === 'semi_furnished') {
+      // Optional for semi-furnished: a cost can still be entered (e.g. to add a few
+      // missing pieces), but isn't required — blank means 0, same as "Furnished".
+      furnishing = parseNonNegative(formData.furnishing) ?? 0
     }
+
+    // Optional metadata, both property types — blank is fine either way.
+    const carpetAreaSqft = parseNonNegative(formData.carpetAreaSqft)
+    const bhk = parseNonNegative(formData.bhk)
 
     const commuteDistanceKm = parseNonNegative(formData.commuteDistanceKm)
     if (commuteDistanceKm === null) {
@@ -270,6 +409,8 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       costPerKm,
       commuteDistanceKm,
       numberOfPeople,
+      carpetAreaSqft,
+      bhk,
     }
 
     const saved = await saveProperty(newProperty, user?.id ?? null)
@@ -309,31 +450,131 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
             </button>
           </div>
 
-          <div className="space-y-4">
+          {/* STEP 2: entry-mode tabs. "Paste Listing" is UI only for now — Extract Details isn't wired yet. */}
+          <div className="flex gap-2 mb-6 border-b border-border">
+            <button
+              type="button"
+              onClick={() => setEntryMode('manual')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                entryMode === 'manual'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Manual Entry
+            </button>
+            <button
+              type="button"
+              onClick={() => setEntryMode('paste')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                entryMode === 'paste'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Paste Listing
+            </button>
+          </div>
+
+          {entryMode === 'paste' && (
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Listing description</label>
+                <textarea
+                  value={listingText}
+                  onChange={(e) => setListingText(e.target.value)}
+                  placeholder="Paste the listing description here..."
+                  rows={8}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground resize-y"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExtract}
+                disabled={isExtracting || !listingText.trim()}
+                className="w-full"
+              >
+                {isExtracting ? 'Extracting…' : 'Extract Details'}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                This will pre-fill the Manual Entry form below — you can review and edit everything before saving.
+              </p>
+            </div>
+          )}
+
+          <div className={`space-y-4 ${entryMode === 'paste' ? 'hidden' : ''}`}>
+            {extractError && (
+              <div className="p-3 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 text-sm text-amber-700 dark:text-amber-300">
+                {extractError}
+              </div>
+            )}
+
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium mb-2">Property Name *</label>
+              <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                Property Name *
+                <AutoFilledBadge show={autoFilledFields.has('name')} />
+              </label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="e.g., Downtown Condo"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                className={fieldClassName(autoFilledFields.has('name'))}
               />
             </div>
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-medium mb-2">Location {isRent && '*'}</label>
+              <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                Location {isRent && '*'}
+                <AutoFilledBadge show={autoFilledFields.has('location')} />
+              </label>
               <input
                 type="text"
                 name="location"
                 value={formData.location}
                 onChange={handleInputChange}
                 placeholder="e.g., Mumbai, Bandra"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                className={fieldClassName(autoFilledFields.has('location'))}
               />
+            </div>
+
+            {/* Optional descriptive metadata — not used in the cost calculation */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                  Carpet Area (sq ft)
+                  <AutoFilledBadge show={autoFilledFields.has('carpetAreaSqft')} />
+                </label>
+                <input
+                  type="number"
+                  name="carpetAreaSqft"
+                  min={0}
+                  value={formData.carpetAreaSqft}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 650"
+                  className={fieldClassName(autoFilledFields.has('carpetAreaSqft'))}
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                  Bedrooms (BHK)
+                  <AutoFilledBadge show={autoFilledFields.has('bhk')} />
+                </label>
+                <input
+                  type="number"
+                  name="bhk"
+                  min={0}
+                  step="0.5"
+                  value={formData.bhk}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 2"
+                  className={fieldClassName(autoFilledFields.has('bhk'))}
+                />
+              </div>
             </div>
 
             {/* Type */}
@@ -353,8 +594,9 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
             {/* Cost Fields Grid */}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="flex items-center gap-2 text-sm font-medium mb-2">
                   {isRent ? 'Monthly Rent *' : 'Monthly EMI'}
+                  <AutoFilledBadge show={autoFilledFields.has('rent')} />
                 </label>
                 <input
                   type="number"
@@ -362,19 +604,22 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
                   value={formData.rent}
                   onChange={handleInputChange}
                   placeholder="₹"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                  className={fieldClassName(autoFilledFields.has('rent'))}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Maintenance {isRent && '*'}</label>
+                <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                  Maintenance {isRent && '*'}
+                  <AutoFilledBadge show={autoFilledFields.has('maintenance')} />
+                </label>
                 <input
                   type="number"
                   name="maintenance"
                   value={formData.maintenance}
                   onChange={handleInputChange}
                   placeholder="₹"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                  className={fieldClassName(autoFilledFields.has('maintenance'))}
                 />
               </div>
 
@@ -409,12 +654,15 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
               {isRent && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Parking *</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Parking *
+                      <AutoFilledBadge show={autoFilledFields.has('parkingMode')} />
+                    </label>
                     <select
                       name="parkingMode"
                       value={formData.parkingMode}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                      className={fieldClassName(autoFilledFields.has('parkingMode'))}
                     >
                       <option value="" disabled>Select…</option>
                       <option value="included">Included</option>
@@ -439,22 +687,31 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Furnishing *</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Furnishing *
+                      <AutoFilledBadge show={autoFilledFields.has('furnishingMode')} />
+                    </label>
                     <select
                       name="furnishingMode"
                       value={formData.furnishingMode}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                      className={fieldClassName(autoFilledFields.has('furnishingMode'))}
                     >
                       <option value="" disabled>Select…</option>
                       <option value="furnished">Furnished</option>
+                      <option value="semi_furnished">Semi-furnished</option>
                       <option value="unfurnished">Unfurnished</option>
                     </select>
                   </div>
 
-                  {formData.furnishingMode === 'unfurnished' && (
+                  {(formData.furnishingMode === 'unfurnished' || formData.furnishingMode === 'semi_furnished') && (
                     <div>
-                      <label className="block text-sm font-medium mb-2">Furnishing/setup cost (₹, one-time) *</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Furnishing/setup cost (₹, one-time) {formData.furnishingMode === 'unfurnished' && '*'}
+                        {formData.furnishingMode === 'semi_furnished' && (
+                          <span className="text-muted-foreground font-normal"> (optional)</span>
+                        )}
+                      </label>
                       <input
                         type="number"
                         name="furnishing"
@@ -484,20 +741,24 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Deposit *</label>
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      Deposit *
+                      <AutoFilledBadge show={autoFilledFields.has('deposit')} />
+                    </label>
                     <input
                       type="number"
                       name="deposit"
                       value={formData.deposit}
                       onChange={handleInputChange}
                       placeholder="₹"
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                      className={fieldClassName(autoFilledFields.has('deposit'))}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
                       Brokerage <span className="text-muted-foreground font-normal">(defaults to 1x rent)</span>
+                      <AutoFilledBadge show={autoFilledFields.has('brokerage')} />
                     </label>
                     <input
                       type="number"
@@ -505,7 +766,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
                       value={formData.brokerage}
                       onChange={handleInputChange}
                       placeholder="₹"
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                      className={fieldClassName(autoFilledFields.has('brokerage'))}
                     />
                   </div>
 
@@ -607,10 +868,12 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
             <Button variant="outline" onClick={onClose} disabled={isSaving} className="flex-1">
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isSaving} className="flex-1">
-              <Plus className="h-4 w-4 mr-2" />
-              {isSaving ? 'Adding…' : 'Add Property'}
-            </Button>
+            {entryMode === 'manual' && (
+              <Button onClick={handleSubmit} disabled={isSaving} className="flex-1">
+                <Plus className="h-4 w-4 mr-2" />
+                {isSaving ? 'Adding…' : 'Add Property'}
+              </Button>
+            )}
           </div>
         </div>
       </Card>
