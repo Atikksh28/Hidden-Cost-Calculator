@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 export function useCountUp(targetValue: number, duration: number = 1200, shouldStart: boolean = true) {
   const [count, setCount] = useState(0)
   const countRef = useRef(0)
-  const animationFrameRef = useRef<number>()
+  const animationFrameRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     if (!shouldStart) return

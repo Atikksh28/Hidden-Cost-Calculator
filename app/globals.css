@@ -48,9 +48,16 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Theme tokens. Two palettes, one place:
+ *   :root  = "Daylight" (light)    .dark = "Midnight" (dark)
+ * The `dark` class on <html> is set by the inline script in layout.tsx (saved choice,
+ * else the OS preference) and flipped by the toggle. Every text/background pair below
+ * is >= 4.5:1 contrast (WCAG AA).
+ */
 :root {
   color-scheme: light;
-  --background: #fafaf9;
+  --background: #faf9f7;
   --foreground: #1c1917;
   --card: #ffffff;
   --card-foreground: #1c1917;
@@ -60,101 +67,65 @@
   --primary-foreground: #ffffff;
   --secondary: #f59e0b;
   --secondary-foreground: #1c1917;
-  --muted: #e7e5e4;
-  --muted-foreground: #78716c;
-  --accent: #ff6b35;
+  --muted: #efedea;
+  --muted-foreground: #6b645e;
+  --accent: #c2410c;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
-  --border: #e7e5e4;
-  --input: #e7e5e4;
+  --border: #e4e0db;
+  --input: #e4e0db;
   --ring: #5b21b6;
   --chart-1: #5b21b6;
   --chart-2: #f59e0b;
-  --chart-3: #ff6b35;
-  --chart-4: #6366f1;
+  --chart-3: #c2410c;
+  --chart-4: #4f46e5;
   --chart-5: #8b5cf6;
   --radius: 0.75rem;
-  --sidebar: #fafaf9;
+  --sidebar: #faf9f7;
   --sidebar-foreground: #1c1917;
   --sidebar-primary: #5b21b6;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f59e0b;
   --sidebar-accent-foreground: #1c1917;
-  --sidebar-border: #e7e5e4;
+  --sidebar-border: #e4e0db;
   --sidebar-ring: #5b21b6;
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0f0e0d;
-  --foreground: #f5f5f4;
-  --card: #1c1917;
-  --card-foreground: #f5f5f4;
-  --popover: #1c1917;
-  --popover-foreground: #f5f5f4;
+  --background: #0f0e13;
+  --foreground: #f4f2f7;
+  --card: #17151d;
+  --card-foreground: #f4f2f7;
+  --popover: #1b1823;
+  --popover-foreground: #f4f2f7;
   --primary: #a78bfa;
-  --primary-foreground: #1c1917;
+  --primary-foreground: #14101f;
   --secondary: #fbbf24;
   --secondary-foreground: #1c1917;
-  --muted: #292524;
-  --muted-foreground: #a8a29e;
-  --accent: #ff8c42;
+  --muted: #25222e;
+  --muted-foreground: #a29db0;
+  --accent: #fb923c;
   --accent-foreground: #1c1917;
-  --destructive: #ef4444;
-  --border: #292524;
-  --input: #292524;
+  --destructive: #f87171;
+  --border: #2f2b3a;
+  --input: #2f2b3a;
   --ring: #a78bfa;
   --chart-1: #a78bfa;
   --chart-2: #fbbf24;
-  --chart-3: #ff8c42;
+  --chart-3: #fb923c;
   --chart-4: #818cf8;
   --chart-5: #c4b5fd;
-  --sidebar: #1c1917;
-  --sidebar-foreground: #f5f5f4;
+  --sidebar: #17151d;
+  --sidebar-foreground: #f4f2f7;
   --sidebar-primary: #a78bfa;
-  --sidebar-primary-foreground: #1c1917;
+  --sidebar-primary-foreground: #14101f;
   --sidebar-accent: #fbbf24;
   --sidebar-accent-foreground: #1c1917;
-  --sidebar-border: #292524;
+  --sidebar-border: #2f2b3a;
   --sidebar-ring: #a78bfa;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --background: #0f0e0d;
-    --foreground: #f5f5f4;
-    --card: #1c1917;
-    --card-foreground: #f5f5f4;
-    --popover: #1c1917;
-    --popover-foreground: #f5f5f4;
-    --primary: #a78bfa;
-    --primary-foreground: #1c1917;
-    --secondary: #fbbf24;
-    --secondary-foreground: #1c1917;
-    --muted: #292524;
-    --muted-foreground: #a8a29e;
-    --accent: #ff8c42;
-    --accent-foreground: #1c1917;
-    --destructive: #ef4444;
-    --border: #292524;
-    --input: #292524;
-    --ring: #a78bfa;
-    --chart-1: #a78bfa;
-    --chart-2: #fbbf24;
-    --chart-3: #ff8c42;
-    --chart-4: #818cf8;
-    --chart-5: #c4b5fd;
-    --sidebar: #1c1917;
-    --sidebar-foreground: #f5f5f4;
-    --sidebar-primary: #a78bfa;
-    --sidebar-primary-foreground: #1c1917;
-    --sidebar-accent: #fbbf24;
-    --sidebar-accent-foreground: #1c1917;
-    --sidebar-border: #292524;
-    --sidebar-ring: #a78bfa;
-  }
-}
 
 @layer base {
   * {

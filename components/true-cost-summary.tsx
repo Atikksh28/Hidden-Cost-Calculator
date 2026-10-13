@@ -4,8 +4,7 @@ import { Card } from '@/components/ui/card'
 import { AlertTriangle, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatIndianCurrency } from '@/lib/format-indian-currency'
-import { useActiveProperty } from '@/context/active-property-context'
-import type { CustomProperty } from '@/components/add-property-form'
+import { BREAKDOWN_LABELS, type PropertyWithBreakdown } from '@/lib/breakdown'
 
 interface AffordabilityRanges {
   safe: number
@@ -13,7 +12,8 @@ interface AffordabilityRanges {
 }
 
 interface TrueCostSummaryProps {
-  customProperties: CustomProperty[]
+  /** The property the Results page is showing, resolved once upstream and shared with the bubble chart. */
+  property: PropertyWithBreakdown
   affordabilityRanges?: AffordabilityRanges
 }
 
@@ -29,43 +29,12 @@ function getAffordabilityStatus(totalMonthly: number, ranges?: AffordabilityRang
 }
 
 const statusStyles = {
-  Safe: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900 text-green-600 dark:text-green-400',
-  Stretch: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 text-amber-600 dark:text-amber-400',
-  Risky: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400',
+  Safe: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400',
+  Stretch: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-400',
+  Risky: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-700 dark:text-red-400',
 } as const
 
-export function TrueCostSummary({ customProperties, affordabilityRanges }: TrueCostSummaryProps) {
-  const { activeProperty } = useActiveProperty()
-
-  // Only Rent properties run through calculateTrueCost carry a real breakdown.
-  const rentProperties = customProperties.filter(
-    (p): p is CustomProperty & { trueCostBreakdown: NonNullable<CustomProperty['trueCostBreakdown']> } =>
-      p.trueCostBreakdown != null
-  )
-
-  // Prefer whatever's selected via the active-property picker; otherwise fall
-  // back to the most recently added Rent property.
-  const property =
-    rentProperties.find((p) => p.id === activeProperty?.id) ?? rentProperties[rentProperties.length - 1]
-
-  if (!property) {
-    return (
-      <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">True Cost Summary</h2>
-            <p className="text-foreground/60 text-lg">Your complete financial picture for this property</p>
-          </div>
-          <Card className="p-8 text-center">
-            <p className="text-foreground/60">
-              Add a rental property above to see its true monthly cost broken down here.
-            </p>
-          </Card>
-        </div>
-      </section>
-    )
-  }
-
+export function TrueCostSummary({ property, affordabilityRanges }: TrueCostSummaryProps) {
   const breakdown = property.trueCostBreakdown
   const showCostPerPerson = property.costPerPerson != null && property.costPerPerson !== property.totalMonthly
   const oneTimeAndDeposit = breakdown.amortizedOneTime + breakdown.depositOpportunityCost
@@ -77,13 +46,13 @@ export function TrueCostSummary({ customProperties, affordabilityRanges }: TrueC
   const status = affordabilityRanges ? getAffordabilityStatus(property.totalMonthly, affordabilityRanges) : null
 
   return (
-    <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+    <div className="min-w-0">
+      <div>
+        <div className="mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             True Cost Summary
           </h2>
-          <p className="text-foreground/60 text-lg">
+          <p className="text-muted-foreground">
             Your complete financial picture for this property
           </p>
         </div>
@@ -104,20 +73,20 @@ export function TrueCostSummary({ customProperties, affordabilityRanges }: TrueC
               <div>
                 <h4 className="font-semibold text-foreground mb-4">Monthly Breakdown</h4>
                 <div className="space-y-3">
-                  <CostRow label="Rent" value={breakdown.rent} />
-                  <CostRow label="Maintenance" value={breakdown.maintenance} />
-                  <CostRow label="Parking" value={breakdown.parking} />
-                  <CostRow label="Commute" value={breakdown.commuteCost} />
-                  <CostRow label="Utilities" value={breakdown.utilities} />
-                  <CostRow label="Repairs Buffer" value={breakdown.repairBuffer} />
+                  <CostRow label={BREAKDOWN_LABELS.rent} value={breakdown.rent} />
+                  <CostRow label={BREAKDOWN_LABELS.maintenance} value={breakdown.maintenance} />
+                  <CostRow label={BREAKDOWN_LABELS.parking} value={breakdown.parking} />
+                  <CostRow label={BREAKDOWN_LABELS.commuteCost} value={breakdown.commuteCost} />
+                  <CostRow label={BREAKDOWN_LABELS.utilities} value={breakdown.utilities} />
+                  <CostRow label={BREAKDOWN_LABELS.repairBuffer} value={breakdown.repairBuffer} />
                 </div>
               </div>
 
               <div>
                 <h4 className="font-semibold text-foreground mb-4">One-Time & Deposit Costs (Monthly Equivalent)</h4>
                 <div className="space-y-3">
-                  <CostRow label="One-Time Costs (Amortized)" value={breakdown.amortizedOneTime} />
-                  <CostRow label="Deposit Opportunity Cost" value={breakdown.depositOpportunityCost} />
+                  <CostRow label={BREAKDOWN_LABELS.amortizedOneTime} value={breakdown.amortizedOneTime} />
+                  <CostRow label={BREAKDOWN_LABELS.depositOpportunityCost} value={breakdown.depositOpportunityCost} />
                   <div className="pt-2 border-t border-border">
                     <CostRow label="Total One-Time (Monthly)" value={oneTimeAndDeposit} highlight />
                   </div>
@@ -175,8 +144,8 @@ export function TrueCostSummary({ customProperties, affordabilityRanges }: TrueC
             <div className="grid md:grid-cols-2 gap-4 mb-8">
               <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-900">
                 <p className="text-sm text-muted-foreground mb-2">Hidden Cost Increase</p>
-                <p className="text-xl font-bold text-red-600 dark:text-red-400">+{hiddenCostIncreasePercent}%</p>
-                <p className="text-xs text-red-600 dark:text-red-400 mb-2">
+                <p className="text-xl font-bold text-red-700 dark:text-red-400">+{hiddenCostIncreasePercent}%</p>
+                <p className="text-xs text-red-700 dark:text-red-400 mb-2">
                   From {formatIndianCurrency(breakdown.rent)} rent to {formatIndianCurrency(property.totalMonthly)} real
                 </p>
               </div>
@@ -209,7 +178,7 @@ export function TrueCostSummary({ customProperties, affordabilityRanges }: TrueC
           </div>
         </Card>
       </div>
-    </section>
+    </div>
   )
 }
 

@@ -1,24 +1,25 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { HeroSection } from '@/components/hero-section'
 import { PropertyComparison } from '@/components/property-comparison'
-import { CostBreakdown } from '@/components/cost-breakdown'
+import { ResultsView } from '@/components/results-view'
 import { AffordabilityAnalysis } from '@/components/affordability-analysis'
 import {
   ConversationalOnboarding,
   initialOnboardingData,
   type OnboardingData,
 } from '@/components/conversational-onboarding'
-import { TrueCostSummary } from '@/components/true-cost-summary'
 import { WizardStepper } from '@/components/wizard-stepper'
 import { WizardFooter } from '@/components/wizard-footer'
 import { AddPropertyForm, type CustomProperty } from '@/components/add-property-form'
 import { PropertyToggleBar } from '@/components/property-toggle-bar'
 import { AuthWidget } from '@/components/auth-widget'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { AuthProvider, useAuth } from '@/context/auth-context'
-import { ActivePropertyProvider, useActiveProperty, type Property } from '@/context/active-property-context'
+import { ActivePropertyProvider, useActiveProperty } from '@/context/active-property-context'
+import { hasBreakdown, resolveSelectedProperty } from '@/lib/breakdown'
 import { getSavedProperties, deleteSavedProperty, migrateLocalPropertiesToSupabase } from '@/lib/property-storage'
 
 // 5-step wizard: 0 = landing/hero (no stepper/footer), 1-4 = the numbered steps.
@@ -115,20 +116,30 @@ function HomeContent() {
     }
   }, [user, authLoading])
 
-  // Update available properties in context
-  const { setAvailableProperties } = useActiveProperty()
+  // Results step: only properties with a real, calculated breakdown (custom Rent
+  // properties) can be shown there. The demo properties and EMI properties have
+  // none, so they don't get pills or bubbles — and the table and the bubble chart
+  // below are both handed the one `selectedProperty` resolved here.
+  const { activeProperty, setActiveProperty, setAvailableProperties } = useActiveProperty()
+  const rentProperties = useMemo(() => customProperties.filter(hasBreakdown), [customProperties])
+  const selectedProperty = useMemo(
+    () => resolveSelectedProperty(rentProperties, activeProperty?.id),
+    [rentProperties, activeProperty?.id]
+  )
 
   useEffect(() => {
-    // All properties are available for selection, regardless of visibility in comparison
-    const availableProps: Property[] = [
-      { id: '1', name: 'Bandra Apartment' },
-      { id: '2', name: 'Powai Rental' },
-      { id: '3', name: 'Andheri Purchase' },
-      ...customProperties.map((cp) => ({ id: cp.id, name: cp.name })),
-    ]
+    setAvailableProperties(rentProperties.map((p) => ({ id: p.id, name: p.name })))
+  }, [rentProperties, setAvailableProperties])
 
-    setAvailableProperties(availableProps)
-  }, [customProperties, setAvailableProperties])
+  // Keep the highlighted pill in step with what's actually shown (e.g. the
+  // fallback to the latest property when nothing, or a deleted one, was picked).
+  useEffect(() => {
+    if (selectedProperty && activeProperty?.id !== selectedProperty.id) {
+      setActiveProperty({ id: selectedProperty.id, name: selectedProperty.name })
+    } else if (!selectedProperty && activeProperty) {
+      setActiveProperty(null)
+    }
+  }, [selectedProperty, activeProperty, setActiveProperty])
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -177,13 +188,7 @@ function HomeContent() {
 
       case 4:
         return (
-          <>
-            <CostBreakdown />
-            <TrueCostSummary
-              customProperties={customProperties}
-              affordabilityRanges={affordabilityRanges || undefined}
-            />
-          </>
+          <ResultsView property={selectedProperty} affordabilityRanges={affordabilityRanges || undefined} />
         )
 
       default:
@@ -201,11 +206,10 @@ function HomeContent() {
     <main
       className={`bg-background flex flex-col ${isLockedStep ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}
     >
-      {isSupabaseConfigured && (
-        <div className="shrink-0 flex justify-end px-4 sm:px-6 lg:px-8 py-2 border-b border-border">
-          <AuthWidget />
-        </div>
-      )}
+      <div className="shrink-0 flex items-center justify-end gap-2 px-4 sm:px-6 lg:px-8 py-2 border-b border-border">
+        {isSupabaseConfigured && <AuthWidget />}
+        <ThemeToggle />
+      </div>
 
       <WizardStepper currentStep={currentStep} steps={WIZARD_STEPS} />
 

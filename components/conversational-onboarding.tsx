@@ -208,7 +208,7 @@ export function ConversationalOnboarding({ onComplete }: ConversationalOnboardin
           <h2 className="text-lg md:text-xl font-bold text-foreground mb-0.5">
             Quick chat before we crunch the numbers
           </h2>
-          <p className="text-foreground/60 text-xs md:text-sm">
+          <p className="text-muted-foreground text-xs md:text-sm">
             {QUESTIONS.length} quick questions — tap an answer and we&apos;ll move straight to the next one.
           </p>
         </div>
@@ -263,7 +263,7 @@ export function ConversationalOnboarding({ onComplete }: ConversationalOnboardin
                   <h3 className="text-lg md:text-xl font-semibold text-foreground">{question.question}</h3>
                 </div>
               </div>
-              <p className="text-xs md:text-sm text-foreground/50 mb-3 md:pl-[3rem]">{question.helper}</p>
+              <p className="text-xs md:text-sm text-muted-foreground mb-3 md:pl-[3rem]">{question.helper}</p>
 
               <div className="grid grid-cols-1 gap-2">
                 {question.options.map((option) => {
@@ -330,7 +330,7 @@ export function ConversationalOnboarding({ onComplete }: ConversationalOnboardin
           {isComplete && (
             <Card className="w-full p-5 md:p-6 border-primary/30 bg-primary/5">
               <h3 className="text-xl font-semibold text-foreground mb-2">All set</h3>
-              <p className="text-sm text-foreground/60 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 We&apos;ve stored your answers. Tap any question above to change it.
               </p>
               <Button variant="outline" onClick={handleRestart}>

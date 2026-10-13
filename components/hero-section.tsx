@@ -41,8 +41,8 @@ function HiddenCostCallout() {
       ref={ref}
       className="flex items-center justify-center gap-2 animate-fade-in"
     >
-      <TrendingUp className="h-5 w-5 text-secondary" />
-      <p className="text-sm font-semibold text-secondary">
+      <TrendingUp className="h-5 w-5 text-amber-700 dark:text-secondary" />
+      <p className="text-sm font-semibold text-amber-700 dark:text-secondary">
         {`+${formatIndianCurrency(animatedCount)} you didn't see coming`}
       </p>
     </div>

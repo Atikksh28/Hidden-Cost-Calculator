@@ -56,7 +56,7 @@ export function AffordabilityAnalysis({ onAffordabilityUpdate }: AffordabilityAn
           <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-1">
             Affordability Analysis
           </h2>
-          <p className="text-foreground/60 text-sm md:text-base">
+          <p className="text-muted-foreground text-sm md:text-base">
             Understand what you can realistically afford based on your income and lifestyle
           </p>
         </div>
@@ -268,7 +268,7 @@ const RANGE_CARD_TONES = {
     icon: 'text-green-600',
     label: 'text-green-700 dark:text-green-300',
     value: 'text-green-700 dark:text-green-300',
-    hint: 'text-green-600 dark:text-green-400',
+    hint: 'text-green-700 dark:text-green-400',
   },
   amber: {
     bg: 'bg-amber-50 dark:bg-amber-950/30',
@@ -276,7 +276,7 @@ const RANGE_CARD_TONES = {
     icon: 'text-amber-600',
     label: 'text-amber-700 dark:text-amber-300',
     value: 'text-amber-700 dark:text-amber-300',
-    hint: 'text-amber-600 dark:text-amber-400',
+    hint: 'text-amber-700 dark:text-amber-400',
   },
   red: {
     bg: 'bg-red-50 dark:bg-red-950/30',
@@ -284,7 +284,7 @@ const RANGE_CARD_TONES = {
     icon: 'text-red-600',
     label: 'text-red-700 dark:text-red-300',
     value: 'text-red-700 dark:text-red-300',
-    hint: 'text-red-600 dark:text-red-400',
+    hint: 'text-red-700 dark:text-red-400',
   },
 } as const
 

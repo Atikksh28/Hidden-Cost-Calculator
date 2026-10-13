@@ -113,7 +113,7 @@ const STATUS_STYLES: Record<
     headerGradient: 'from-green-500/15 to-green-500/5',
     totalText: 'text-green-600 dark:text-green-400',
     badge:
-      'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900',
+      'bg-green-100 text-green-800 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900',
   },
   Stretch: {
     border: 'border-amber-500',
@@ -264,7 +264,7 @@ export function PropertyComparison({
     <div className="h-full flex flex-col">
       <div className="mb-4 shrink-0">
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1">Property Comparison Dashboard</h2>
-        <p className="text-foreground/60 text-sm">Compare up to 3 properties side by side to see the true monthly cost</p>
+        <p className="text-muted-foreground text-sm">Compare up to 3 properties side by side to see the true monthly cost</p>
       </div>
 
       {filteredProperties.length === 0 ? (
@@ -291,7 +291,7 @@ export function PropertyComparison({
                       compares the raw number, it knows nothing about quality/location/fit. */}
                   {isLowestCost && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white shadow-md whitespace-nowrap">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-700 text-white shadow-md whitespace-nowrap">
                         Lowest Cost
                       </span>
                     </div>
@@ -378,12 +378,14 @@ export function PropertyComparison({
   )
 }
 
-function CostItem({ label, value }: { label: string; value: number }) {
+/** `null` is a real value here: legacy fields (commute, repairs, ...) are null on EMI and newer Rent properties. */
+function CostItem({ label, value }: { label: string; value: number | null | undefined }) {
+  const amount = value ?? 0
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="text-muted-foreground">{label}</span>
-      <span className={value > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}>
-        {value > 0 ? `₹${value.toLocaleString()}` : '—'}
+      <span className={amount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+        {amount > 0 ? `₹${amount.toLocaleString()}` : '—'}
       </span>
     </div>
   )
