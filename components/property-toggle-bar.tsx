@@ -11,12 +11,12 @@ interface PropertyToggleBarProps {
   visiblePropertyIds: string[]
   onToggleVisibility: (id: string) => void
   onDeleteCustomProperty: (id: string) => void
-  onDeleteProperty: (id: string) => void
   onAddNew: () => void
   customPropertyIds: string[]
 }
 
 const MAX_COMPARE = 3
+const MAX_SAVED = 12
 
 /**
  * Left sidebar for the Properties step: search, the saved-property list
@@ -29,7 +29,6 @@ export function PropertyToggleBar({
   visiblePropertyIds,
   onToggleVisibility,
   onDeleteCustomProperty,
-  onDeleteProperty,
   onAddNew,
   customPropertyIds,
 }: PropertyToggleBarProps) {
@@ -71,7 +70,6 @@ export function PropertyToggleBar({
         {filteredProperties.map((property) => {
           const propertyId = property.id.toString()
           const isVisible = visiblePropertyIds.includes(propertyId)
-          const isCustom = customPropertyIds.includes(propertyId)
           const isDisabled = !isVisible && atMax
 
           return (
@@ -94,7 +92,7 @@ export function PropertyToggleBar({
 
               <button
                 onClick={() => {
-                  isCustom ? onDeleteCustomProperty(propertyId) : onDeleteProperty(propertyId)
+                  onDeleteCustomProperty(propertyId)
                 }}
                 className="p-1 hover:bg-red-50 dark:hover:bg-red-950 rounded transition-colors shrink-0"
                 title="Delete property"
@@ -106,20 +104,22 @@ export function PropertyToggleBar({
         })}
 
         {filteredProperties.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">No properties match your search.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            {allProperties.length === 0 ? 'No saved properties yet.' : 'No properties match your search.'}
+          </p>
         )}
       </div>
 
       {/* Add New */}
       <div className="shrink-0 pt-3 mt-3 border-t border-border">
-        {customPropertyIds.length < 3 && allProperties.length < 6 ? (
+        {customPropertyIds.length < MAX_SAVED ? (
           <Button onClick={onAddNew} variant="outline" className="w-full flex items-center justify-center gap-2">
             <Plus className="h-4 w-4" />
             Add Property
           </Button>
         ) : (
           <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-900 text-xs text-amber-700 dark:text-amber-300">
-            Maximum 3 custom properties allowed per comparison
+            Maximum {MAX_SAVED} saved properties — delete one to add another
           </div>
         )}
       </div>

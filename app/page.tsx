@@ -30,8 +30,7 @@ const LAST_STEP = WIZARD_STEPS.length // 4
 function HomeContent() {
   const { user, loading: authLoading, isSupabaseConfigured } = useAuth()
   const [customProperties, setCustomProperties] = useState<CustomProperty[]>([])
-  const [visiblePropertyIds, setVisiblePropertyIds] = useState<string[]>(['1', '2', '3'])
-  const [deletedDefaultPropertyIds, setDeletedDefaultPropertyIds] = useState<string[]>([])
+  const [visiblePropertyIds, setVisiblePropertyIds] = useState<string[]>([])
   const [showAddPropertyForm, setShowAddPropertyForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   // Listing text sent by the bookmarklet. Held in memory only: never saved, never auto-extracted.
@@ -105,12 +104,6 @@ function HomeContent() {
     }
   }
 
-  const handleDeleteProperty = (id: string) => {
-    // Permanently delete default properties by marking them as deleted
-    setDeletedDefaultPropertyIds((prev) => [...prev, id])
-    setVisiblePropertyIds((prev) => prev.filter((pid) => pid !== id))
-  }
-
   const handleAffordabilityUpdate = useCallback((ranges: { safe: number; stretch: number } | null) => {
     setAffordabilityRanges(ranges)
   }, [])
@@ -135,7 +128,10 @@ function HomeContent() {
         await migrateLocalPropertiesToSupabase(userId)
       }
       const properties = await getSavedProperties(userId)
-      if (!cancelled) setCustomProperties(properties)
+      if (!cancelled) {
+        setCustomProperties(properties)
+        setVisiblePropertyIds(properties.slice(0, 3).map((p) => p.id))
+      }
     }
 
     sync()
@@ -187,16 +183,10 @@ function HomeContent() {
             <aside className="w-full md:w-72 shrink-0 md:h-full">
               <Card className="p-4 h-full max-h-64 md:max-h-none overflow-hidden">
                 <PropertyToggleBar
-                  allProperties={[
-                    { id: 1, name: 'Bandra Apartment' },
-                    { id: 2, name: 'Powai Rental' },
-                    { id: 3, name: 'Andheri Purchase' },
-                    ...customProperties,
-                  ].filter((p) => !deletedDefaultPropertyIds.includes(p.id.toString()))}
+                  allProperties={customProperties}
                   visiblePropertyIds={visiblePropertyIds}
                   onToggleVisibility={handleToggleVisibility}
                   onDeleteCustomProperty={handleDeleteCustomProperty}
-                  onDeleteProperty={handleDeleteProperty}
                   onAddNew={() => setShowAddPropertyForm(true)}
                   customPropertyIds={customProperties.map((p) => p.id)}
                 />

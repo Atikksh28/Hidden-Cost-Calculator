@@ -7,78 +7,6 @@ import { Pencil } from 'lucide-react'
 import type { CustomProperty } from '@/components/add-property-form'
 import { formatIndianCurrency } from '@/lib/format-indian-currency'
 
-const defaultProperties = [
-  {
-    id: 1,
-    name: 'Bandra Apartment',
-    location: 'Mumbai, Bandra',
-    type: 'Rent',
-    rent: 50000,
-    maintenance: 2500,
-    parking: 5000,
-    commute: 2000,
-    schoolTransport: 0,
-    furnishing: 0,
-    repairs: 1500,
-    additionalCharges: 8000,
-    registration: 0,
-    totalMonthly: 69000,
-    status: 'Safe',
-    deposit: null,
-    brokerage: null,
-    moving: null,
-    utilities: null,
-    costPerPerson: null,
-    trueCostBreakdown: null,
-  },
-  {
-    id: 2,
-    name: 'Powai Rental',
-    location: 'Mumbai, Powai',
-    type: 'Rent',
-    rent: 45000,
-    maintenance: 2000,
-    parking: 3000,
-    commute: 3500,
-    schoolTransport: 2000,
-    furnishing: 0,
-    repairs: 1000,
-    additionalCharges: 7000,
-    registration: 0,
-    totalMonthly: 63500,
-    status: 'Safe',
-    deposit: null,
-    brokerage: null,
-    moving: null,
-    utilities: null,
-    costPerPerson: null,
-    trueCostBreakdown: null,
-  },
-  {
-    id: 3,
-    name: 'Andheri Purchase',
-    location: 'Mumbai, Andheri',
-    type: 'EMI',
-    rent: 35000,
-    maintenance: 3000,
-    parking: 2000,
-    commute: 4000,
-    schoolTransport: 2500,
-    furnishing: 1500,
-    repairs: 2000,
-    additionalCharges: 9000,
-    registration: 2000,
-    totalMonthly: 61000,
-    status: 'Stretch',
-    deposit: null,
-    brokerage: null,
-    moving: null,
-    utilities: null,
-    costPerPerson: null,
-    trueCostBreakdown: null,
-  },
-]
-
 interface AffordabilityRanges {
   safe: number
   stretch: number
@@ -246,13 +174,12 @@ function CostCompositionBar({ property }: { property: any }) {
 
 export function PropertyComparison({
   customProperties = [],
-  visiblePropertyIds = ['1', '2', '3'],
+  visiblePropertyIds = [],
   affordabilityRanges,
   onEdit,
 }: PropertyComparisonProps) {
   const customIds = new Set(customProperties.map((p) => p.id))
-  // Combine default and custom properties
-  const allProperties = [...defaultProperties, ...customProperties]
+  const allProperties = customProperties
 
   // Filter by visibility if provided
   let propertiesToDisplay = visiblePropertyIds
@@ -264,7 +191,7 @@ export function PropertyComparison({
     return true
   })
 
-  const minTotalCost = Math.min(...filteredProperties.map((p) => p.totalMonthly))
+  const minTotalCost = filteredProperties.length ? Math.min(...filteredProperties.map((p) => p.totalMonthly)) : 0
 
   return (
     <div className="h-full flex flex-col">
@@ -275,8 +202,14 @@ export function PropertyComparison({
 
       {filteredProperties.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-lg text-muted-foreground mb-2">No properties selected.</p>
-          <p className="text-sm text-muted-foreground">Check a property in the sidebar to compare it here.</p>
+          <p className="text-lg text-muted-foreground mb-2">
+            {customProperties.length === 0 ? 'No properties yet.' : 'No properties selected.'}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {customProperties.length === 0
+              ? 'Click “Add Property” in the sidebar to enter your first one.'
+              : 'Check a property in the sidebar to compare it here.'}
+          </p>
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto pt-3 -mt-3">
