@@ -2,6 +2,8 @@
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Pencil } from 'lucide-react'
 import type { CustomProperty } from '@/components/add-property-form'
 import { formatIndianCurrency } from '@/lib/format-indian-currency'
 
@@ -83,6 +85,8 @@ interface AffordabilityRanges {
 }
 
 interface PropertyComparisonProps {
+  /** Called with a custom property's id when its Edit button is clicked. Demo properties have no button. */
+  onEdit?: (id: string) => void
   customProperties?: CustomProperty[]
   visiblePropertyIds?: string[]
   affordabilityRanges?: AffordabilityRanges
@@ -244,7 +248,9 @@ export function PropertyComparison({
   customProperties = [],
   visiblePropertyIds = ['1', '2', '3'],
   affordabilityRanges,
+  onEdit,
 }: PropertyComparisonProps) {
+  const customIds = new Set(customProperties.map((p) => p.id))
   // Combine default and custom properties
   const allProperties = [...defaultProperties, ...customProperties]
 
@@ -366,6 +372,13 @@ export function PropertyComparison({
                           </span>
                         </div>
                       </div>
+
+                      {onEdit && customIds.has(String(property.id)) && (
+                        <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => onEdit(String(property.id))}>
+                          <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                          Edit
+                        </Button>
+                      )}
                     </div>
                   </Card>
                 </div>

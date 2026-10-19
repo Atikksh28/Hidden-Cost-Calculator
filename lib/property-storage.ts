@@ -191,6 +191,25 @@ export async function saveProperty(property: CustomProperty, userId: string | nu
   return property
 }
 
+/**
+ * Saves edits to an existing property, keeping its id. Same branching as save/delete: a property
+ * that lives in Supabase (uuid id, logged in) is updated there; everything else (guest, EMI, or a
+ * Rent property that fell back to localStorage, whose id starts with "custom-") is updated locally.
+ */
+export async function updateProperty(property: CustomProperty, userId: string | null): Promise<CustomProperty> {
+  const livesInSupabase = !property.id.startsWith('custom-')
+  if (userId && supabase && property.type === 'Rent' && livesInSupabase) {
+    const { user_id: _omit, ...fields } = propertyToInsertPayload(property, userId)
+    void _omit
+    const { data, error } = await supabase.from('properties').update(fields).eq('id', property.id).select().single()
+    if (!error && data) return rowToProperty(data as PropertyRow)
+    console.error('[property-storage] Supabase update failed:', error?.message)
+    throw new Error('Could not save your changes. Please try again.')
+  }
+  writeLocalProperties(readLocalProperties().map((p) => (p.id === property.id ? property : p)))
+  return property
+}
+
 /** Mirrors saveProperty's branching: Rent + logged in -> Supabase, else -> localStorage. */
 export async function deleteSavedProperty(property: { id: string; type: 'Rent' | 'EMI' }, userId: string | null): Promise<void> {
   if (userId && supabase && property.type === 'Rent') {

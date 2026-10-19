@@ -11,8 +11,10 @@ import {
   getNumberOfPeople,
 } from '@/lib/onboarding-mappings'
 import { calculateTrueCost, type TrueCostBreakdown } from '@/lib/calculate-true-cost'
-import { saveProperty } from '@/lib/property-storage'
+import { saveProperty, updateProperty } from '@/lib/property-storage'
 import { useAuth } from '@/context/auth-context'
+import { BookmarkletHelper } from '@/components/bookmarklet-helper'
+import { getImportHostname, type ImportedListing } from '@/lib/import-listing'
 
 interface ExtractedListing {
   propertyName: string | null
@@ -72,6 +74,11 @@ interface AddPropertyFormProps {
   onClose: () => void
   /** The 6 onboarding answers — drives which Rent fields are required/hidden, and feeds the true-cost calc. */
   onboardingData: OnboardingData
+  /** Listing text sent from the bookmarklet. Untrusted: only ever shown as plain text in the textarea/banner. */
+  imported?: ImportedListing | null
+  /** Edit mode: pre-fills from this property, keeps its id, and calls onUpdate instead of onAdd. */
+  editing?: CustomProperty | null
+  onUpdate?: (property: CustomProperty) => void
 }
 
 /** Blank or invalid (NaN/negative) -> null, so callers can treat "not filled in" as a validation failure. */
@@ -97,17 +104,48 @@ function AutoFilledBadge({ show }: { show: boolean }) {
   )
 }
 
-export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyFormProps) {
+const str = (n: number | null | undefined) => (n == null ? '' : String(n))
+
+/** Builds form state from a saved property. Parking/furnishing "modes" weren't stored, so they're inferred from the cost. */
+function formFromProperty(p: CustomProperty) {
+  return {
+    name: p.name,
+    location: p.location,
+    type: p.type,
+    rent: str(p.rent),
+    maintenance: str(p.maintenance),
+    parking: p.parking ? str(p.parking) : '',
+    furnishing: p.furnishing ? str(p.furnishing) : '',
+    registration: p.registration ? str(p.registration) : '',
+    parkingMode: (p.parking ? 'not_included' : 'included') as '' | 'included' | 'not_included' | 'not_needed',
+    furnishingMode: (p.furnishing ? 'unfurnished' : 'furnished') as '' | 'furnished' | 'semi_furnished' | 'unfurnished',
+    commuteDistanceKm: str(p.commuteDistanceKm),
+    carpetAreaSqft: str(p.carpetAreaSqft),
+    bhk: str(p.bhk),
+    deposit: str(p.deposit),
+    brokerage: str(p.brokerage),
+    moving: p.moving ? str(p.moving) : '',
+    utilities: p.utilities ? str(p.utilities) : '',
+    commute: str(p.commute),
+    schoolTransport: str(p.schoolTransport),
+    repairs: str(p.repairs),
+    additionalCharges: str(p.additionalCharges),
+  }
+}
+
+export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, editing, onUpdate }: AddPropertyFormProps) {
   const { user } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
-  const [entryMode, setEntryMode] = useState<'manual' | 'paste'>('manual')
-  const [listingText, setListingText] = useState('')
+  // An imported listing opens on the Paste tab with the textarea pre-filled. It is NOT extracted
+  // automatically: the user reviews it and clicks Extract Details.
+  const [entryMode, setEntryMode] = useState<'manual' | 'paste'>(imported ? 'paste' : 'manual')
+  const [listingText, setListingText] = useState(imported?.text ?? '')
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractError, setExtractError] = useState<string | null>(null)
   // Field names successfully pre-filled by extraction, for the STEP 6 "check this" indicator.
   // Cleared per-field the moment the user edits that field (it's their value now, not the model's).
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => editing ? formFromProperty(editing) : {
     name: '',
     location: '',
     type: 'Rent' as 'Rent' | 'EMI',
@@ -265,7 +303,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
     }
 
     const newProperty: CustomProperty = {
-      id: `custom-${Date.now()}`,
+      id: editing?.id ?? `custom-${Date.now()}`,
       name: formData.name,
       location: formData.location || 'Unknown',
       type: 'EMI',
@@ -287,8 +325,8 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
 
     // EMI always goes to localStorage regardless of login — the Supabase
     // schema has no column for it (see Step 1 audit).
-    const saved = await saveProperty(newProperty, null)
-    onAdd(saved)
+    const saved = editing ? await updateProperty(newProperty, null) : await saveProperty(newProperty, null)
+    ;(editing ? onUpdate ?? onAdd : onAdd)(saved)
     onClose()
   }
 
@@ -363,9 +401,11 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
     // Registration/Stamp Duty feeds agreementCharges in the calc.
     const agreementCharges = formData.registration ? parseInt(formData.registration) : 0
 
-    const stayMonths = getStayMonths(onboardingData.stayDuration, onboardingData.stayDurationCustom)
-    const costPerKm = getCostPerKm(onboardingData.commuteMethod)
-    const numberOfPeople = getNumberOfPeople(onboardingData.occupancy, onboardingData.occupancyCustom)
+    // When editing, keep the values this property was originally calculated with, so an edit doesn't
+    // silently change its totals just because onboarding answers changed since.
+    const stayMonths = editing?.stayMonths ?? getStayMonths(onboardingData.stayDuration, onboardingData.stayDurationCustom)
+    const costPerKm = editing?.costPerKm ?? getCostPerKm(onboardingData.commuteMethod)
+    const numberOfPeople = editing?.numberOfPeople ?? getNumberOfPeople(onboardingData.occupancy, onboardingData.occupancyCustom)
 
     const result = calculateTrueCost({
       rent,
@@ -385,7 +425,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
     })
 
     const newProperty: CustomProperty = {
-      id: `custom-${Date.now()}`,
+      id: editing?.id ?? `custom-${Date.now()}`,
       name: formData.name,
       location: formData.location,
       type: 'Rent',
@@ -413,8 +453,10 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       bhk,
     }
 
-    const saved = await saveProperty(newProperty, user?.id ?? null)
-    onAdd(saved)
+    const saved = editing
+      ? await updateProperty(newProperty, user?.id ?? null)
+      : await saveProperty(newProperty, user?.id ?? null)
+    ;(editing ? onUpdate ?? onAdd : onAdd)(saved)
     onClose()
   }
 
@@ -431,6 +473,8 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       } else {
         await handleSubmitRent()
       }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -441,7 +485,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Add Custom Property</h2>
+            <h2 className="text-2xl font-bold">{editing ? 'Edit Property' : 'Add Custom Property'}</h2>
             <button
               onClick={onClose}
               className="p-1 hover:bg-muted rounded-lg transition-colors"
@@ -451,6 +495,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
           </div>
 
           {/* STEP 2: entry-mode tabs. "Paste Listing" is UI only for now — Extract Details isn't wired yet. */}
+          {!editing && (
           <div className="flex gap-2 mb-6 border-b border-border">
             <button
               type="button"
@@ -475,9 +520,16 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
               Paste Listing
             </button>
           </div>
+          )}
 
           {entryMode === 'paste' && (
             <div className="space-y-4 mb-6">
+              {imported && (
+                <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 text-sm text-foreground">
+                  {/* Plain text only: the hostname is never turned into a link. */}
+                  {`Imported from ${getImportHostname(imported.url) ?? 'a listing page'} — review the text, then click Extract Details`}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-2">Listing description</label>
                 <textarea
@@ -497,6 +549,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
               >
                 {isExtracting ? 'Extracting…' : 'Extract Details'}
               </Button>
+              <BookmarkletHelper />
               <p className="text-xs text-muted-foreground">
                 This will pre-fill the Manual Entry form below — you can review and edit everything before saving.
               </p>
@@ -584,6 +637,8 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
                 name="type"
                 value={formData.type}
                 onChange={handleInputChange}
+                disabled={!!editing}
+                title={editing ? 'Property type can’t be changed after saving' : undefined}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
               >
                 <option value="Rent">Rent</option>
@@ -871,7 +926,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData }: AddPropertyF
             {entryMode === 'manual' && (
               <Button onClick={handleSubmit} disabled={isSaving} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
-                {isSaving ? 'Adding…' : 'Add Property'}
+                {isSaving ? (editing ? 'Saving…' : 'Adding…') : editing ? 'Save Changes' : 'Add Property'}
               </Button>
             )}
           </div>

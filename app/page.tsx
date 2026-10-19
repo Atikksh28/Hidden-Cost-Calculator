@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { HeroSection } from '@/components/hero-section'
 import { PropertyComparison } from '@/components/property-comparison'
@@ -20,6 +20,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { AuthProvider, useAuth } from '@/context/auth-context'
 import { ActivePropertyProvider, useActiveProperty } from '@/context/active-property-context'
 import { hasBreakdown, resolveSelectedProperty } from '@/lib/breakdown'
+import { getImportHostname, parseImportHash, IMPORT_HASH_PREFIX, type ImportedListing } from '@/lib/import-listing'
 import { getSavedProperties, deleteSavedProperty, migrateLocalPropertiesToSupabase } from '@/lib/property-storage'
 
 // 5-step wizard: 0 = landing/hero (no stepper/footer), 1-4 = the numbered steps.
@@ -32,6 +33,10 @@ function HomeContent() {
   const [visiblePropertyIds, setVisiblePropertyIds] = useState<string[]>(['1', '2', '3'])
   const [deletedDefaultPropertyIds, setDeletedDefaultPropertyIds] = useState<string[]>([])
   const [showAddPropertyForm, setShowAddPropertyForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  // Listing text sent by the bookmarklet. Held in memory only: never saved, never auto-extracted.
+  const [importedListing, setImportedListing] = useState<ImportedListing | null>(null)
+  const importAutoOpenedRef = useRef(false)
   const [affordabilityRanges, setAffordabilityRanges] = useState<{
     safe: number
     stretch: number
@@ -41,6 +46,24 @@ function HomeContent() {
   // Wizard navigation state — UI-only, no calculation/data logic here.
   const [currentStep, setCurrentStep] = useState(0)
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
+
+  // Bookmarklet receiver (client only). Read the hash, clear it straight away so the payload
+  // doesn't stay in the URL/history, then keep the validated result in state.
+  useEffect(() => {
+    if (!window.location.hash.startsWith(IMPORT_HASH_PREFIX)) return
+    const parsed = parseImportHash(window.location.hash)
+    history.replaceState(null, '', window.location.pathname + window.location.search)
+    if (parsed && parsed.text.trim()) setImportedListing(parsed)
+  }, [])
+
+  // Once the user reaches Properties (after finishing onboarding normally), open Add Property
+  // on the Paste tab. Still no extraction until they click the button.
+  useEffect(() => {
+    if (currentStep === 3 && importedListing && !importAutoOpenedRef.current) {
+      importAutoOpenedRef.current = true
+      setShowAddPropertyForm(true)
+    }
+  }, [currentStep, importedListing])
 
   const goNext = useCallback(() => {
     setDirection('forward')
@@ -54,10 +77,15 @@ function HomeContent() {
 
   const handleAddProperty = (property: CustomProperty) => {
     setCustomProperties((prev) => [...prev, property])
+    setImportedListing(null)
     // Only auto-select it for comparison if that doesn't exceed the 3-max cap
     // enforced in the sidebar — otherwise it's saved but not yet compared,
     // same as if you'd unchecked it.
     setVisiblePropertyIds((prev) => (prev.length < 3 ? [...prev, property.id] : prev))
+  }
+
+  const handleUpdateProperty = (updated: CustomProperty) => {
+    setCustomProperties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
   }
 
   const handleToggleVisibility = (id: string) => {
@@ -181,6 +209,7 @@ function HomeContent() {
                 customProperties={customProperties}
                 visiblePropertyIds={visiblePropertyIds}
                 affordabilityRanges={affordabilityRanges || undefined}
+                onEdit={setEditingId}
               />
             </div>
           </div>
@@ -211,6 +240,13 @@ function HomeContent() {
         <ThemeToggle />
       </div>
 
+      {importedListing && currentStep < 3 && (
+        <div className="shrink-0 px-4 sm:px-6 lg:px-8 py-2 bg-primary/10 text-sm text-foreground border-b border-border">
+          {/* Plain text only */}
+          {`Listing imported from ${getImportHostname(importedListing.url) ?? 'a listing page'}. Finish setup, then add it in Properties.`}
+        </div>
+      )}
+
       <WizardStepper currentStep={currentStep} steps={WIZARD_STEPS} />
 
       <div
@@ -224,11 +260,23 @@ function HomeContent() {
 
       <WizardFooter currentStep={currentStep} onBack={goBack} onNext={goNext} />
 
+      {editingId && customProperties.find((p) => p.id === editingId) && (
+        <AddPropertyForm
+          key={editingId}
+          editing={customProperties.find((p) => p.id === editingId)}
+          onAdd={handleAddProperty}
+          onUpdate={handleUpdateProperty}
+          onClose={() => setEditingId(null)}
+          onboardingData={onboardingData}
+        />
+      )}
+
       {showAddPropertyForm && (
         <AddPropertyForm
           onAdd={handleAddProperty}
           onClose={() => setShowAddPropertyForm(false)}
           onboardingData={onboardingData}
+          imported={importedListing}
         />
       )}
     </main>

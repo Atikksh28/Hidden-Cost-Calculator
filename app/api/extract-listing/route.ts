@@ -6,6 +6,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_MODEL = 'gemini-flash-lite-latest'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
+const MAX_LISTING_CHARS = 10_000
 const UNREADABLE_LISTING_MESSAGE = "Couldn't read that listing — please fill the form manually."
 
 export interface ExtractedListing {
@@ -91,6 +92,10 @@ export async function POST(request: NextRequest) {
 
     if (typeof listingText !== 'string' || !listingText.trim()) {
       return NextResponse.json({ error: 'listingText is required.' }, { status: 400 })
+    }
+    // The bookmarklet caps text at 8,000 chars; anything much larger isn't a listing and would just burn tokens.
+    if (listingText.length > MAX_LISTING_CHARS) {
+      return NextResponse.json({ error: 'That text is too long to be a single listing.' }, { status: 413 })
     }
 
     const geminiResponse = await fetch(GEMINI_URL, {
