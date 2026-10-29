@@ -58,8 +58,9 @@ function buildCategories(breakdown: TrueCostBreakdown): BubbleCategory[] {
 // so they stay visible and tappable. Everything is a fraction of the box size,
 // so the chart scales down cleanly on mobile.
 // ---------------------------------------------------------------------------
-const DESKTOP_SIZE = 300
-const MOBILE_SIZE = 260
+const LARGE_SIZE = 440 // xl screens
+const MEDIUM_SIZE = 380 // tablets / small laptops
+const SMALL_SIZE = 320 // phones
 const MIN_RADIUS_RATIO = 14 / 300
 const MAX_RADIUS_RATIO = 70 / 300
 const AMOUNT_LABEL_RATIO = 35 / 300 // bubbles bigger than this also show their amount
@@ -89,15 +90,20 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.min(Math.max(n, lo), Math.max(lo, hi))
 }
 
-/** 300px on desktop, 260px on small screens. */
+/** 440px on wide screens, 380px on medium, 320px on phones. */
 function useChartSize(): number {
-  const [size, setSize] = useState(DESKTOP_SIZE)
+  const [size, setSize] = useState(LARGE_SIZE)
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 640px)')
-    const update = () => setSize(mq.matches ? DESKTOP_SIZE : MOBILE_SIZE)
+    const wide = window.matchMedia('(min-width: 1280px)')
+    const medium = window.matchMedia('(min-width: 640px)')
+    const update = () => setSize(wide.matches ? LARGE_SIZE : medium.matches ? MEDIUM_SIZE : SMALL_SIZE)
     update()
-    mq.addEventListener('change', update)
-    return () => mq.removeEventListener('change', update)
+    wide.addEventListener('change', update)
+    medium.addEventListener('change', update)
+    return () => {
+      wide.removeEventListener('change', update)
+      medium.removeEventListener('change', update)
+    }
   }, [])
   return size
 }
@@ -457,10 +463,10 @@ export function CostBreakdown({ property }: CostBreakdownProps) {
         }
       `}</style>
 
-      {/* Bounded simulation box: bubbles can't leave it, and it doesn't grow with the page. */}
+      {/* Bounded simulation area (no border): bubbles can't leave it, and it doesn't grow with the page. */}
       <div
         ref={containerRef}
-        className="relative mx-auto overflow-hidden rounded-2xl border border-border/60 bg-card/40"
+        className="relative mx-auto overflow-hidden"
         style={{ width: size, height: size }}
         onPointerDown={(e) => {
           if (e.target === e.currentTarget) setActiveKey(null)
@@ -509,7 +515,7 @@ export function CostBreakdown({ property }: CostBreakdownProps) {
       </div>
 
       {/* Legend: one dot per category currently shown */}
-      <ul className="mx-auto mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground" style={{ maxWidth: size + 40 }}>
+      <ul className="mx-auto mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground" style={{ maxWidth: size + 40 }}>
         {categories.map((c) => (
           <li key={c.key} className="inline-flex items-center gap-1.5">
             <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${CATEGORY_STYLES[c.key].dot}`} />

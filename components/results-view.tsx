@@ -31,7 +31,7 @@ export function ResultsView({ property, affordabilityRanges }: ResultsViewProps)
         <PropertyPillSelector />
 
         {property ? (
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[460px_minmax(0,1fr)] lg:items-start">
             <div className="lg:sticky lg:top-28">
               <CostBreakdown property={property} />
             </div>

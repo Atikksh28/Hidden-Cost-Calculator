@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase-client'
 import type { CustomProperty } from '@/components/add-property-form'
 import { calculateTrueCost } from '@/lib/calculate-true-cost'
+import { checkProperty, parseStoredProperties, MAX_LOCAL_PROPERTIES } from '@/lib/validate-property'
 
 const LOCAL_STORAGE_KEY = 'property-cost-calculator:properties'
 
@@ -13,7 +14,9 @@ export function readLocalProperties(): CustomProperty[] {
   if (typeof window === 'undefined') return []
   try {
     const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as CustomProperty[]) : []
+    // localStorage can be edited by anyone with access to the browser, so never trust its shape:
+    // invalid entries are dropped and only known fields are copied.
+    return raw ? parseStoredProperties(JSON.parse(raw)) : []
   } catch {
     return []
   }
@@ -27,6 +30,13 @@ function writeLocalProperties(properties: CustomProperty[]) {
     // Storage full/unavailable/private-mode — fail silently; in-memory state
     // for this session still works, it just won't survive a refresh.
   }
+}
+
+/** Same rules as the database check constraints (supabase/security.sql); the message is shown to the user. */
+function validatedOrThrow(property: CustomProperty): CustomProperty {
+  const result = checkProperty(property)
+  if (!result.ok) throw new Error(result.error)
+  return result.value
 }
 
 // ---------------------------------------------------------------------------
@@ -172,7 +182,8 @@ export async function getSavedProperties(userId: string | null): Promise<CustomP
  * real uuid. Everything else (EMI, or not logged in) -> localStorage,
  * returns the property unchanged.
  */
-export async function saveProperty(property: CustomProperty, userId: string | null): Promise<CustomProperty> {
+export async function saveProperty(input: CustomProperty, userId: string | null): Promise<CustomProperty> {
+  const property = validatedOrThrow(input)
   if (userId && supabase && property.type === 'Rent') {
     const { data, error } = await supabase
       .from('properties')
@@ -187,7 +198,11 @@ export async function saveProperty(property: CustomProperty, userId: string | nu
     // Fall through to localStorage so the user's data isn't lost.
   }
 
-  writeLocalProperties([...readLocalProperties(), property])
+  const existing = readLocalProperties()
+  if (existing.length >= MAX_LOCAL_PROPERTIES) {
+    throw new Error(`You can save up to ${MAX_LOCAL_PROPERTIES} properties on this device. Delete one to add another.`)
+  }
+  writeLocalProperties([...existing, property])
   return property
 }
 
@@ -196,12 +211,13 @@ export async function saveProperty(property: CustomProperty, userId: string | nu
  * that lives in Supabase (uuid id, logged in) is updated there; everything else (guest, EMI, or a
  * Rent property that fell back to localStorage, whose id starts with "custom-") is updated locally.
  */
-export async function updateProperty(property: CustomProperty, userId: string | null): Promise<CustomProperty> {
+export async function updateProperty(input: CustomProperty, userId: string | null): Promise<CustomProperty> {
+  const property = validatedOrThrow(input)
   const livesInSupabase = !property.id.startsWith('custom-')
   if (userId && supabase && property.type === 'Rent' && livesInSupabase) {
     const { user_id: _omit, ...fields } = propertyToInsertPayload(property, userId)
     void _omit
-    const { data, error } = await supabase.from('properties').update(fields).eq('id', property.id).select().single()
+    const { data, error } = await supabase.from('properties').update(fields).eq('id', property.id).eq('user_id', userId).select().single()
     if (!error && data) return rowToProperty(data as PropertyRow)
     console.error('[property-storage] Supabase update failed:', error?.message)
     throw new Error('Could not save your changes. Please try again.')
@@ -213,7 +229,7 @@ export async function updateProperty(property: CustomProperty, userId: string | 
 /** Mirrors saveProperty's branching: Rent + logged in -> Supabase, else -> localStorage. */
 export async function deleteSavedProperty(property: { id: string; type: 'Rent' | 'EMI' }, userId: string | null): Promise<void> {
   if (userId && supabase && property.type === 'Rent') {
-    const { error } = await supabase.from('properties').delete().eq('id', property.id)
+    const { error } = await supabase.from('properties').delete().eq('id', property.id).eq('user_id', userId)
     if (error) {
       console.error('[property-storage] Supabase delete failed:', error.message)
     }
@@ -233,6 +249,7 @@ export async function deleteSavedProperty(property: { id: string; type: 'Rent' |
 export async function migrateLocalPropertiesToSupabase(userId: string): Promise<void> {
   if (!supabase) return
   const local = readLocalProperties()
+  // readLocalProperties already validated every entry and capped the count; user_id below comes from the verified session.
   const localRent = local.filter((p) => p.type === 'Rent')
   if (localRent.length === 0) return
 
@@ -240,7 +257,7 @@ export async function migrateLocalPropertiesToSupabase(userId: string): Promise<
   for (const property of localRent) {
     const { error } = await supabase.from('properties').insert(propertyToInsertPayload(property, userId))
     if (error) {
-      console.error('[property-storage] migration failed for', property.name, error.message)
+      console.error('[property-storage] migration of one property failed:', error.message)
       continue
     }
     migratedIds.push(property.id)

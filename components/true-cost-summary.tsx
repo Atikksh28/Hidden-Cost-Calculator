@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import { AlertTriangle, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatIndianCurrency } from '@/lib/format-indian-currency'
+import { getNegotiationTips } from '@/lib/negotiation-tips'
 import { BREAKDOWN_LABELS, type PropertyWithBreakdown } from '@/lib/breakdown'
 
 interface AffordabilityRanges {
@@ -37,6 +38,8 @@ const statusStyles = {
 export function TrueCostSummary({ property, affordabilityRanges }: TrueCostSummaryProps) {
   const breakdown = property.trueCostBreakdown
   const showCostPerPerson = property.costPerPerson != null && property.costPerPerson !== property.totalMonthly
+  const negotiationTips = getNegotiationTips(property)
+  const totalPotentialSaving = negotiationTips.reduce((sum, t) => sum + t.monthlySaving, 0)
   const oneTimeAndDeposit = breakdown.amortizedOneTime + breakdown.depositOpportunityCost
 
   const hiddenCostIncreasePercent =
@@ -122,19 +125,19 @@ export function TrueCostSummary({ property, affordabilityRanges }: TrueCostSumma
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-white mb-3">What you could negotiate:</p>
                     <div className="space-y-2 text-sm text-white/90">
-                      <div className="flex items-start gap-2">
-                        <span className="text-yellow-300 font-bold mt-0.5">•</span>
-                        <span>Ask for a free parking slot or reduced parking charges</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-yellow-300 font-bold mt-0.5">•</span>
-                        <span>Negotiate a shorter lock-in period to reduce the amortized one-time cost</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-yellow-300 font-bold mt-0.5">•</span>
-                        <span>Request a maintenance cost cap in the rental agreement</span>
-                      </div>
+                      {negotiationTips.map((tip) => (
+                        <div key={tip.id} className="flex items-start gap-2">
+                          <span className="text-yellow-300 font-bold mt-0.5">•</span>
+                          <span>{tip.text}</span>
+                        </div>
+                      ))}
                     </div>
+                    {negotiationTips.length > 0 && (
+                      <p className="text-xs text-white/70 pt-2">
+                        Landing all of these could save roughly {formatIndianCurrency(Math.round(totalPotentialSaving))}/mo.
+                        These are estimates, not guarantees.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

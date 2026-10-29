@@ -8,6 +8,8 @@ import { ResultsView } from '@/components/results-view'
 import { AffordabilityAnalysis } from '@/components/affordability-analysis'
 import {
   ConversationalOnboarding,
+  loadSavedOnboarding,
+  saveOnboarding,
   initialOnboardingData,
   type OnboardingData,
 } from '@/components/conversational-onboarding'
@@ -108,8 +110,14 @@ function HomeContent() {
     setAffordabilityRanges(ranges)
   }, [])
 
-  const handleOnboardingComplete = useCallback((data: OnboardingData) => {
+  const handleOnboardingChange = useCallback((data: OnboardingData) => {
     setOnboardingData(data)
+    saveOnboarding(data)
+  }, [])
+
+  // Restore answers from a previous visit (client only, so it can't cause a hydration mismatch).
+  useEffect(() => {
+    setOnboardingData(loadSavedOnboarding())
   }, [])
 
   // Load saved properties whenever the resolved auth state changes (initial
@@ -171,7 +179,7 @@ function HomeContent() {
         return <HeroSection onGetStarted={goNext} />
 
       case 1:
-        return <ConversationalOnboarding onComplete={handleOnboardingComplete} />
+        return <ConversationalOnboarding onChange={handleOnboardingChange} initialData={onboardingData} />
 
       case 2:
         return <AffordabilityAnalysis onAffordabilityUpdate={handleAffordabilityUpdate} />

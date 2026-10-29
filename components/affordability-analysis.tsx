@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
 
 interface AffordabilityAnalysisProps {
@@ -68,7 +69,7 @@ export function AffordabilityAnalysis({ onAffordabilityUpdate }: AffordabilityAn
               label="Monthly Household Income"
               value={income}
               onChange={setIncome}
-              min={50000}
+              min={0}
               max={500000}
               step={10000}
               hidden={hideIncome}
@@ -169,22 +170,23 @@ export function AffordabilityAnalysis({ onAffordabilityUpdate }: AffordabilityAn
                   </div>
                 )}
 
-                {expendablePct !== null && (
+                {hideIncome ? null : (
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-semibold text-foreground">
-                        Your expendable income vs. the 30% / 40% limits
-                      </h4>
-                      <span className="text-sm font-bold text-primary">
-                        {expendablePct.toFixed(0)}% of income remaining
-                      </span>
-                    </div>
-                    <AllocationBar safePct={30} stretchPct={40} freePct={expendablePct} />
+                    <h4 className="text-sm font-semibold text-foreground mb-2">
+                      Housing cost limits, as a share of your monthly income
+                    </h4>
+                    <AllocationBar safePct={30} stretchPct={40} />
                     <p className="text-xs text-muted-foreground mt-2">
-                      Safe and Stretch are 30% and 40% of your total monthly income. The marker shows how
-                      much of your income is left after EMIs and savings. It isn&apos;t tied to any specific
-                      property yet — each property&apos;s actual cost is checked against these limits in
-                      Comparison and Results.
+                      A property&apos;s true monthly cost is Safe up to 30% of your total income, Stretch up to
+                      40%, and Risky beyond that. Each property is checked against these limits in Comparison
+                      and Results.
+                      {expendablePct !== null && (
+                        <>
+                          {' '}
+                          Separately, you keep about {expendablePct.toFixed(0)}% of your income after EMIs and
+                          savings; that is your cushion for everything else and is not part of this scale.
+                        </>
+                      )}
                     </p>
                   </div>
                 )}
@@ -216,6 +218,9 @@ function SliderField({
   hidden: boolean
   onToggleHidden: (hidden: boolean) => void
 }) {
+  // What the user is typing, so clearing the box or typing "0" mid-edit doesn't snap back. Null = show `value`.
+  const [draft, setDraft] = useState<string | null>(null)
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -238,12 +243,33 @@ function SliderField({
             max={max}
             step={step}
             value={value}
-            onChange={(e) => onChange(Number(e.target.value))}
+            onChange={(e) => {
+              setDraft(null)
+              onChange(Number(e.target.value))
+            }}
             className="slider-thick flex-1"
+            aria-label={`${label} slider`}
           />
-          <span className="text-lg font-bold text-primary min-w-fit tabular-nums">
-            ₹{value.toLocaleString()}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-sm font-semibold text-primary">₹</span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              value={draft ?? String(value)}
+              aria-label={`${label} (type an amount)`}
+              onChange={(e) => {
+                if (e.target.value.trim().startsWith('-')) return
+                setDraft(e.target.value)
+                // Blank counts as 0; negatives are already blocked by the Input.
+                const n = e.target.value === '' ? 0 : Math.round(Number(e.target.value))
+                if (Number.isFinite(n) && n >= 0) onChange(n)
+              }}
+              onBlur={() => setDraft(null)}
+              className="!h-7 !w-24 !px-2 !py-0 text-right text-sm font-semibold text-primary tabular-nums"
+            />
+          </div>
         </div>
       ) : (
         <div className="text-sm text-muted-foreground italic">Data not provided</div>
@@ -316,41 +342,37 @@ function RangeCard({
 
 /**
  * Visual bar over 0-100% of income: green up to the Safe limit, amber up to
- * the Stretch limit, red beyond. The marker sits at the total left after
- * EMIs/savings (the ceiling that Safe/Stretch are 30%/40% of).
+ * the Stretch limit, red beyond. Purely the housing-cost scale; no marker.
  */
 function AllocationBar({
   safePct,
   stretchPct,
-  freePct,
 }: {
   safePct: number
   stretchPct: number
-  freePct: number
 }) {
   const clamp = (n: number) => Math.min(Math.max(n, 0), 100)
   const safe = clamp(safePct)
   const stretch = clamp(stretchPct)
-  const marker = clamp(freePct)
   return (
-    <div className="relative pt-3 pb-4">
+    <div className="relative pb-4">
       <div className="h-3 rounded-full overflow-hidden flex">
         <div className="bg-green-400 dark:bg-green-600" style={{ width: `${safe}%` }} />
         <div className="bg-amber-400 dark:bg-amber-600" style={{ width: `${stretch - safe}%` }} />
         <div className="bg-red-400 dark:bg-red-600" style={{ width: `${100 - stretch}%` }} />
       </div>
-      <div className="absolute top-0 -translate-x-1/2" style={{ left: `${marker}%` }}>
-        <div className="w-0.5 h-3 bg-foreground" />
-      </div>
-      <div className="relative h-3 mt-1 text-[10px] text-muted-foreground">
+      {/* Tick lines at the Safe/Stretch boundaries; the labels sit either side of them on one row. */}
+      {safe > 0 && <div className="absolute top-3 h-4 w-px bg-foreground/40" style={{ left: `${safe}%` }} />}
+      {stretch > safe && <div className="absolute top-3 h-4 w-px bg-foreground/40" style={{ left: `${stretch}%` }} />}
+      <div className="relative h-4 mt-1 text-xs text-muted-foreground">
         <span className="absolute left-0">0%</span>
         {safe > 0 && (
-          <span className="absolute" style={{ left: `${safe}%`, transform: 'translateX(-50%)' }}>
+          <span className="absolute -translate-x-full pr-1.5 whitespace-nowrap" style={{ left: `${safe}%` }}>
             Safe {safePct.toFixed(0)}%
           </span>
         )}
         {stretch > safe && (
-          <span className="absolute top-3" style={{ left: `${stretch}%`, transform: 'translateX(-50%)' }}>
+          <span className="absolute pl-1.5 whitespace-nowrap" style={{ left: `${stretch}%` }}>
             Stretch {stretchPct.toFixed(0)}%
           </span>
         )}

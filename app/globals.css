@@ -127,6 +127,17 @@
 }
 
 
+/* Number fields: no up/down spinner arrows (they and the mouse wheel made values easy to change by accident). */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

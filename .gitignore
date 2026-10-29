@@ -46,3 +46,10 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# secrets and local tool config
+.env.*
+!.env.example
+!.env.local.example
+*.pem
+.claude/settings.local.json

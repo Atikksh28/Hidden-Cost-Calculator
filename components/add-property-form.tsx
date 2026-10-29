@@ -176,6 +176,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+    if (e.target.type === 'number' && value.trim().startsWith('-')) return
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -199,6 +200,11 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ listingText }),
       })
+      if (res.status === 429) {
+        setExtractError('Too many extraction requests — please wait a minute and try again, or fill the form manually.')
+        setEntryMode('manual')
+        return
+      }
       if (!res.ok) throw new Error('extraction request failed')
       const data: ExtractedListing = await res.json()
 
@@ -262,7 +268,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
       setAutoFilledFields(filled)
       setEntryMode('manual')
     } catch (error) {
-      console.error('[AddPropertyForm] extraction failed:', error)
+      console.error('[AddPropertyForm] extraction failed:', error instanceof Error ? error.name : 'unknown')
       setExtractError("Couldn't read that listing — please fill the form manually.")
       setEntryMode('manual')
     } finally {
@@ -482,7 +488,15 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Card
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onKeyDown={(e) => {
+          if (e.target instanceof HTMLInputElement && e.target.type === 'number' && ['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault()
+        }}
+        onWheel={(e) => {
+          if (e.target instanceof HTMLInputElement && e.target.type === 'number') e.target.blur()
+        }}
+      >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">{editing ? 'Edit Property' : 'Add Custom Property'}</h2>
@@ -537,6 +551,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                   onChange={(e) => setListingText(e.target.value)}
                   placeholder="Paste the listing description here..."
                   rows={8}
+                  maxLength={8000}
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground resize-y"
                 />
               </div>
@@ -550,6 +565,11 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                 {isExtracting ? 'Extracting…' : 'Extract Details'}
               </Button>
               <BookmarkletHelper />
+              <p className="text-xs text-muted-foreground">
+                Privacy: the text above is sent to Google&apos;s Gemini AI to read the listing. Nothing else (no
+                income, EMIs or savings) is sent, and the text isn&apos;t stored. Remove personal details such as
+                names and phone numbers before extracting.
+              </p>
               <p className="text-xs text-muted-foreground">
                 This will pre-fill the Manual Entry form below — you can review and edit everything before saving.
               </p>
@@ -655,6 +675,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                 </label>
                 <input
                   type="number"
+                min={0}
                   name="rent"
                   value={formData.rent}
                   onChange={handleInputChange}
@@ -670,6 +691,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                 </label>
                 <input
                   type="number"
+                min={0}
                   name="maintenance"
                   value={formData.maintenance}
                   onChange={handleInputChange}
@@ -685,6 +707,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">Parking</label>
                     <input
                       type="number"
+                min={0}
                       name="parking"
                       value={formData.parking}
                       onChange={handleInputChange}
@@ -696,6 +719,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">Furnishing</label>
                     <input
                       type="number"
+                min={0}
                       name="furnishing"
                       value={formData.furnishing}
                       onChange={handleInputChange}
@@ -802,6 +826,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     </label>
                     <input
                       type="number"
+                min={0}
                       name="deposit"
                       value={formData.deposit}
                       onChange={handleInputChange}
@@ -817,6 +842,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     </label>
                     <input
                       type="number"
+                min={0}
                       name="brokerage"
                       value={formData.brokerage}
                       onChange={handleInputChange}
@@ -829,6 +855,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">Moving Costs</label>
                     <input
                       type="number"
+                min={0}
                       name="moving"
                       value={formData.moving}
                       onChange={handleInputChange}
@@ -841,6 +868,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">Utilities Setup</label>
                     <input
                       type="number"
+                min={0}
                       name="utilities"
                       value={formData.utilities}
                       onChange={handleInputChange}
@@ -857,6 +885,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">Commute</label>
                     <input
                       type="number"
+                min={0}
                       name="commute"
                       value={formData.commute}
                       onChange={handleInputChange}
@@ -869,6 +898,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">School Transport</label>
                     <input
                       type="number"
+                min={0}
                       name="schoolTransport"
                       value={formData.schoolTransport}
                       onChange={handleInputChange}
@@ -881,6 +911,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">Repairs</label>
                     <input
                       type="number"
+                min={0}
                       name="repairs"
                       value={formData.repairs}
                       onChange={handleInputChange}
@@ -893,6 +924,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                     <label className="block text-sm font-medium mb-2">Additional Charges</label>
                     <input
                       type="number"
+                min={0}
                       name="additionalCharges"
                       value={formData.additionalCharges}
                       onChange={handleInputChange}
@@ -909,6 +941,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
                 </label>
                 <input
                   type="number"
+                min={0}
                   name="registration"
                   value={formData.registration}
                   onChange={handleInputChange}

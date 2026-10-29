@@ -80,9 +80,6 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
               Start Comparing Properties
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="border-primary/30 text-primary">
-              View Sample Dashboard
-            </Button>
           </div>
 
           {/* Quick stat cards with animation */}

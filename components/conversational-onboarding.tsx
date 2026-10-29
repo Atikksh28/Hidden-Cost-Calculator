@@ -133,14 +133,57 @@ function optionLabel(q: QuestionConfig, value: string | null, customValue: numbe
 // Component
 // ---------------------------------------------------------------------------
 
-interface ConversationalOnboardingProps {
-  /** Fired once, when the 6th question is answered. STEP 4: intentionally NOT wired to any calculation. */
-  onComplete?: (data: OnboardingData) => void
+const ONBOARDING_STORAGE_KEY = 'property-cost-calculator:onboarding'
+
+/** Reads saved answers back, keeping only values that are still valid options. Anything else is dropped. */
+export function loadSavedOnboarding(): OnboardingData {
+  const result: OnboardingData = { ...initialOnboardingData }
+  try {
+    const raw = typeof window === 'undefined' ? null : window.localStorage.getItem(ONBOARDING_STORAGE_KEY)
+    const saved: unknown = raw ? JSON.parse(raw) : null
+    if (typeof saved !== 'object' || saved === null) return result
+    const obj = saved as Record<string, unknown>
+    for (const q of QUESTIONS) {
+      const value = obj[q.id]
+      if (typeof value !== 'string' || !q.options.some((o) => o.value === value)) continue
+      let custom: number | null = null
+      if (q.followUp && value === q.followUp.forValue) {
+        const n = obj[q.followUp.fieldId]
+        if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) continue
+        custom = n
+      }
+      ;(result as unknown as Record<string, unknown>)[q.id] = value
+      if (q.followUp) (result as unknown as Record<string, unknown>)[q.followUp.fieldId] = custom
+    }
+  } catch {
+    // Corrupt or unavailable storage: start fresh.
+  }
+  return result
 }
 
-export function ConversationalOnboarding({ onComplete }: ConversationalOnboardingProps) {
-  const [data, setData] = useState<OnboardingData>(initialOnboardingData)
-  const [step, setStep] = useState(0)
+export function saveOnboarding(data: OnboardingData) {
+  try {
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(data))
+  } catch {
+    // Storage blocked: answers just won't survive a refresh.
+  }
+}
+
+interface ConversationalOnboardingProps {
+  /** Fired once, when the last question is answered. */
+  onComplete?: (data: OnboardingData) => void
+  /** Fired on every answer (and on Start over), so the answers can be kept and saved as you go. */
+  onChange?: (data: OnboardingData) => void
+  /** Answers restored from a previous visit; the flow resumes at the first unanswered question. */
+  initialData?: OnboardingData
+}
+
+export function ConversationalOnboarding({ onComplete, onChange, initialData }: ConversationalOnboardingProps) {
+  const [data, setData] = useState<OnboardingData>(initialData ?? initialOnboardingData)
+  const [step, setStep] = useState(() => {
+    const first = QUESTIONS.findIndex((q) => (initialData ?? initialOnboardingData)[q.id] == null)
+    return first === -1 ? QUESTIONS.length : first
+  })
   // The option value (e.g. 'other', 'split_2plus') currently awaiting its numeric follow-up.
   const [pendingFollowUpValue, setPendingFollowUpValue] = useState<string | null>(null)
   const [followUpDraft, setFollowUpDraft] = useState('')
@@ -162,6 +205,7 @@ export function ConversationalOnboarding({ onComplete }: ConversationalOnboardin
       ...(q.followUp ? { [q.followUp.fieldId]: value === q.followUp.forValue ? customValue : null } : {}),
     }
     setData(next)
+    onChange?.(next)
     setPendingFollowUpValue(null)
     setFollowUpDraft('')
 
@@ -196,6 +240,7 @@ export function ConversationalOnboarding({ onComplete }: ConversationalOnboardin
 
   const handleRestart = () => {
     setData(initialOnboardingData)
+    onChange?.(initialOnboardingData)
     goToStep(0)
   }
 
