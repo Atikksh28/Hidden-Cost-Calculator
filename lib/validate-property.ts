@@ -53,7 +53,7 @@ const NUMBER_FIELDS: Record<string, NumSpec> = {
   costPerPerson: { label: 'Cost per person', min: 0, max: MAX_TOTAL, nullable: true },
   stayMonths: { label: 'Stay duration (months)', ...LIMITS.stayMonths, nullable: true },
   costPerKm: { label: 'Cost per km', ...LIMITS.costPerKm, nullable: true },
-  commuteDistanceKm: { label: 'Commute distance (km)', ...LIMITS.commuteDistanceKm, nullable: true },
+  commuteDistanceKm: { label: 'Daily total commute distance (km)', ...LIMITS.commuteDistanceKm, nullable: true },
   numberOfPeople: { label: 'Number of people', ...LIMITS.numberOfPeople, nullable: true },
   carpetAreaSqft: { label: 'Carpet area (sq ft)', ...LIMITS.carpetAreaSqft, nullable: true },
   bhk: { label: 'BHK', ...LIMITS.bhk, nullable: true },

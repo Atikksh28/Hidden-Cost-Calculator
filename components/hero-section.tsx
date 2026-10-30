@@ -1,19 +1,27 @@
 'use client'
 
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, TrendingUp } from 'lucide-react'
 import { useCountUp } from '@/hooks/use-count-up'
 import { useInView } from '@/hooks/use-in-view'
 import { formatIndianCurrency } from '@/lib/format-indian-currency'
 
-function StatCard({ 
-  label, 
+// Example figures for the landing page; the percentage is derived from them so the three cards always agree.
+const ASSUMED_MONTHLY_COST = 50000
+const TRUE_MONTHLY_COST = 78500
+const HIDDEN_COST_INCREASE_PERCENT = Math.round(((TRUE_MONTHLY_COST - ASSUMED_MONTHLY_COST) / ASSUMED_MONTHLY_COST) * 100)
+
+function StatCard({
+  label,
   value,
-  subtitle 
-}: { 
+  subtitle,
+  format = formatIndianCurrency,
+}: {
   label: string
   value: number
   subtitle?: string
+  format?: (n: number) => string
 }) {
   const { ref, isInView } = useInView()
   const animatedCount = useCountUp(value, 1200, isInView)
@@ -25,7 +33,7 @@ function StatCard({
     >
       <p className="text-sm text-muted-foreground mb-2">{label}</p>
       <p className="text-2xl font-semibold text-foreground">
-        {formatIndianCurrency(animatedCount)}
+        {format(animatedCount)}
       </p>
       {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
     </div>
@@ -34,7 +42,7 @@ function StatCard({
 
 function HiddenCostCallout() {
   const { ref, isInView } = useInView()
-  const animatedCount = useCountUp(28500, 1200, isInView)
+  const animatedCount = useCountUp(TRUE_MONTHLY_COST - ASSUMED_MONTHLY_COST, 1200, isInView)
 
   return (
     <div
@@ -65,7 +73,19 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4 text-balance">
-            Hidden Cost Calculator for Property Decisions
+            Hidden Cost{' '}
+            <span className="whitespace-nowrap">
+              Calculator{' '}
+              <Image
+                src="/hidden-cost-emoji.png"
+                alt=""
+                aria-hidden
+                width={224}
+                height={256}
+                priority
+                className="inline-block h-[0.95em] w-auto align-[-0.12em]"
+              />
+            </span>
           </h1>
           <p className="text-lg md:text-xl text-foreground/70 mb-8 text-balance max-w-2xl mx-auto">
             Compare properties by their real monthly cost, including rent, EMI, commute, maintenance, repairs, parking, registration, and other hidden expenses.
@@ -84,9 +104,14 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
 
           {/* Quick stat cards with animation */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-6">
-            <StatCard label="Sticker Price" value={5000000} subtitle="one-time" />
-            <StatCard label="Assumed Monthly Cost" value={50000} />
-            <StatCard label="True Monthly Cost" value={78500} />
+            <StatCard
+              label="Increase in Cost"
+              value={HIDDEN_COST_INCREASE_PERCENT}
+              subtitle="true vs. assumed monthly cost"
+              format={(n) => `+${Math.round(n)}%`}
+            />
+            <StatCard label="Assumed Monthly Cost" value={ASSUMED_MONTHLY_COST} />
+            <StatCard label="True Monthly Cost" value={TRUE_MONTHLY_COST} />
           </div>
 
           {/* Hidden cost callout below */}

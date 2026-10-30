@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import Image from 'next/image'
 import { Card } from '@/components/ui/card'
 import { HeroSection } from '@/components/hero-section'
 import { PropertyComparison } from '@/components/property-comparison'
@@ -233,9 +234,24 @@ function HomeContent() {
     <main
       className={`bg-background flex flex-col ${isLockedStep ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}
     >
-      <div className="shrink-0 flex items-center justify-end gap-2 px-4 sm:px-6 lg:px-8 py-2 border-b border-border">
-        {isSupabaseConfigured && <AuthWidget />}
-        <ThemeToggle />
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 lg:px-8 py-2 border-b border-border">
+        <button
+          type="button"
+          onClick={() => {
+            setDirection('backward')
+            setCurrentStep(0)
+          }}
+          aria-label="TrueRent — back to the start"
+          className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {/* Two artworks, swapped by the theme class on <html>: dark lettering for day, light lettering for night. */}
+          <Image src="/logo-light.png" alt="TrueRent" width={720} height={116} priority className="h-6 sm:h-8 w-auto dark:hidden" />
+          <Image src="/logo-dark.png" alt="" aria-hidden width={720} height={116} priority className="hidden h-6 sm:h-8 w-auto dark:block" />
+        </button>
+        <div className="flex items-center gap-2">
+          {isSupabaseConfigured && <AuthWidget />}
+          <ThemeToggle />
+        </div>
       </div>
 
       {importedListing && currentStep < 3 && (

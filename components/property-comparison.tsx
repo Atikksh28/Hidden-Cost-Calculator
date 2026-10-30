@@ -41,25 +41,25 @@ const STATUS_STYLES: Record<
 > = {
   Safe: {
     border: 'border-green-500',
-    tint: 'bg-green-50/60 dark:bg-green-950/10',
+    tint: 'bg-card',
     headerGradient: 'from-green-500/15 to-green-500/5',
-    totalText: 'text-green-600 dark:text-green-400',
+    totalText: 'text-green-700 dark:text-green-400',
     badge:
       'bg-green-100 text-green-800 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900',
   },
   Stretch: {
     border: 'border-amber-500',
-    tint: 'bg-amber-50/60 dark:bg-amber-950/10',
+    tint: 'bg-card',
     headerGradient: 'from-amber-500/15 to-amber-500/5',
-    totalText: 'text-amber-600 dark:text-amber-400',
+    totalText: 'text-amber-700 dark:text-amber-400',
     badge:
       'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900',
   },
   Risky: {
     border: 'border-red-500',
-    tint: 'bg-red-50/60 dark:bg-red-950/10',
+    tint: 'bg-card',
     headerGradient: 'from-red-500/15 to-red-500/5',
-    totalText: 'text-red-600 dark:text-red-400',
+    totalText: 'text-red-700 dark:text-red-400',
     badge: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900',
   },
 }
@@ -145,26 +145,26 @@ function CostCompositionBar({ property }: { property: any }) {
   return (
     <div>
       <div className="flex h-1.5 gap-0.5 rounded-full overflow-hidden mb-1.5">
-        {rentPercent > 0 && <div className="bg-slate-400" style={{ width: `${rentPercent}%` }} />}
-        {maintenancePercent > 0 && <div className="bg-slate-500" style={{ width: `${maintenancePercent}%` }} />}
-        {commutePercent > 0 && <div className="bg-slate-600" style={{ width: `${commutePercent}%` }} />}
-        {othersPercent > 0 && <div className="bg-slate-700" style={{ width: `${othersPercent}%` }} />}
+        {rentPercent > 0 && <div className="bg-primary/40" style={{ width: `${rentPercent}%` }} />}
+        {maintenancePercent > 0 && <div className="bg-primary/55" style={{ width: `${maintenancePercent}%` }} />}
+        {commutePercent > 0 && <div className="bg-primary/70" style={{ width: `${commutePercent}%` }} />}
+        {othersPercent > 0 && <div className="bg-primary/85" style={{ width: `${othersPercent}%` }} />}
       </div>
       <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10px]">
         <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
           <span className="text-muted-foreground">Rent/EMI</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/55" />
           <span className="text-muted-foreground">Maintenance</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/70" />
           <span className="text-muted-foreground">Commute</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/85" />
           <span className="text-muted-foreground">Others</span>
         </div>
       </div>

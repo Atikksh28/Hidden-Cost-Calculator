@@ -50,30 +50,30 @@
 
 /*
  * Theme tokens. Two palettes, one place:
- *   :root  = "Daylight" (light)    .dark = "Midnight" (dark)
+ *   :root  = "Daylight" (warm beige, light)    .dark = "Midnight" (dark)
  * The `dark` class on <html> is set by the inline script in layout.tsx (saved choice,
  * else the OS preference) and flipped by the toggle. Every text/background pair below
  * is >= 4.5:1 contrast (WCAG AA).
  */
 :root {
   color-scheme: light;
-  --background: #faf9f7;
+  --background: #f4efe4;
   --foreground: #1c1917;
-  --card: #ffffff;
+  --card: #fbf7ee;
   --card-foreground: #1c1917;
-  --popover: #ffffff;
+  --popover: #fbf7ee;
   --popover-foreground: #1c1917;
   --primary: #5b21b6;
   --primary-foreground: #ffffff;
   --secondary: #f59e0b;
   --secondary-foreground: #1c1917;
-  --muted: #efedea;
-  --muted-foreground: #6b645e;
+  --muted: #e9e2d3;
+  --muted-foreground: #5f574e;
   --accent: #c2410c;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
-  --border: #e4e0db;
-  --input: #e4e0db;
+  --border: #dcd2bf;
+  --input: #dcd2bf;
   --ring: #5b21b6;
   --chart-1: #5b21b6;
   --chart-2: #f59e0b;
@@ -81,13 +81,13 @@
   --chart-4: #4f46e5;
   --chart-5: #8b5cf6;
   --radius: 0.75rem;
-  --sidebar: #faf9f7;
+  --sidebar: #f4efe4;
   --sidebar-foreground: #1c1917;
   --sidebar-primary: #5b21b6;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f59e0b;
   --sidebar-accent-foreground: #1c1917;
-  --sidebar-border: #e4e0db;
+  --sidebar-border: #dcd2bf;
   --sidebar-ring: #5b21b6;
 }
 

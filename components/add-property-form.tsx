@@ -395,7 +395,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
 
     const commuteDistanceKm = parseNonNegative(formData.commuteDistanceKm)
     if (commuteDistanceKm === null) {
-      alert('Commute distance (km) is required')
+      alert('Daily total commute distance (km) is required')
       return
     }
 
@@ -805,7 +805,7 @@ export function AddPropertyForm({ onAdd, onClose, onboardingData, imported, edit
 
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Commute distance from this property (km) *
+                      Daily total commute distance (km) *
                     </label>
                     <input
                       type="number"

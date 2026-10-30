@@ -1,9 +1,11 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
+import { useState } from 'react'
 import { AlertTriangle, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatIndianCurrency } from '@/lib/format-indian-currency'
+import { downloadSummaryPdf } from '@/lib/pdf-summary'
 import { getNegotiationTips } from '@/lib/negotiation-tips'
 import { BREAKDOWN_LABELS, type PropertyWithBreakdown } from '@/lib/breakdown'
 
@@ -38,6 +40,8 @@ const statusStyles = {
 export function TrueCostSummary({ property, affordabilityRanges }: TrueCostSummaryProps) {
   const breakdown = property.trueCostBreakdown
   const showCostPerPerson = property.costPerPerson != null && property.costPerPerson !== property.totalMonthly
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
   const negotiationTips = getNegotiationTips(property)
   const totalPotentialSaving = negotiationTips.reduce((sum, t) => sum + t.monthlySaving, 0)
   const oneTimeAndDeposit = breakdown.amortizedOneTime + breakdown.depositOpportunityCost
@@ -62,7 +66,7 @@ export function TrueCostSummary({ property, affordabilityRanges }: TrueCostSumma
 
         <Card className="overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-8 border-b border-border">
+          <div className="bg-muted/50 p-8 border-b border-border">
             <h3 className="text-2xl font-bold text-foreground mb-2">{property.name}</h3>
             <p className="text-muted-foreground">
               {property.location} • {property.type}
@@ -112,28 +116,28 @@ export function TrueCostSummary({ property, affordabilityRanges }: TrueCostSumma
             </div>
 
             {/* Recommendation Block */}
-            <div className="bg-black rounded-lg border border-yellow-300 p-6 mb-8">
+            <div className="bg-[#fffefb] dark:bg-black rounded-lg border border-teal-600 dark:border-yellow-300 p-6 mb-8">
               <div className="flex gap-4 mb-4">
-                <AlertTriangle className="h-5 w-5 text-yellow-300 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-[#b8860b] dark:text-yellow-300 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-white mb-2">What this means for you</h4>
-                  <p className="text-sm text-white/90 leading-relaxed mb-4">
+                  <h4 className="font-bold text-foreground dark:text-white mb-2">What this means for you</h4>
+                  <p className="text-sm text-foreground/90 dark:text-white/90 leading-relaxed mb-4">
                     The rent alone is {formatIndianCurrency(breakdown.rent)}/mo, but the true monthly cost is{' '}
                     {formatIndianCurrency(property.totalMonthly)} — {hiddenCostIncreasePercent}% higher — once
                     commute, deposit lock-in, amortized one-time costs, and a repairs buffer are factored in.
                   </p>
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-white mb-3">What you could negotiate:</p>
-                    <div className="space-y-2 text-sm text-white/90">
+                    <p className="text-xs font-semibold text-foreground dark:text-white mb-3">What you could negotiate:</p>
+                    <div className="space-y-2 text-sm text-foreground/90 dark:text-white/90">
                       {negotiationTips.map((tip) => (
                         <div key={tip.id} className="flex items-start gap-2">
-                          <span className="text-yellow-300 font-bold mt-0.5">•</span>
+                          <span className="text-teal-700 dark:text-yellow-300 font-bold mt-0.5">•</span>
                           <span>{tip.text}</span>
                         </div>
                       ))}
                     </div>
                     {negotiationTips.length > 0 && (
-                      <p className="text-xs text-white/70 pt-2">
+                      <p className="text-xs text-muted-foreground dark:text-white/70 pt-2">
                         Landing all of these could save roughly {formatIndianCurrency(Math.round(totalPotentialSaving))}/mo.
                         These are estimates, not guarantees.
                       </p>
@@ -172,11 +176,24 @@ export function TrueCostSummary({ property, affordabilityRanges }: TrueCostSumma
             <div className="border-t border-border pt-8">
               <Button
                 variant="outline"
+                disabled={isGeneratingPdf}
+                onClick={async () => {
+                  setIsGeneratingPdf(true)
+                  setPdfError(null)
+                  try {
+                    await downloadSummaryPdf({ property, affordabilityRanges, status })
+                  } catch {
+                    setPdfError("Couldn't create the PDF. Please try again.")
+                  } finally {
+                    setIsGeneratingPdf(false)
+                  }
+                }}
                 className="flex items-center gap-2 border-primary text-primary hover:bg-primary/10"
               >
                 <Download className="h-4 w-4" />
-                Download PDF Summary
+                {isGeneratingPdf ? 'Preparing PDF…' : 'Download PDF Summary'}
               </Button>
+              {pdfError && <p className="text-sm text-red-700 dark:text-red-400 mt-2">{pdfError}</p>}
             </div>
           </div>
         </Card>

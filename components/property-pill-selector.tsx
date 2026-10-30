@@ -23,7 +23,7 @@ export function PropertyPillSelector() {
             className={`px-4 py-2 rounded-full font-medium transition-all duration-300 ${
               activeProperty?.id === property.id
                 ? 'bg-primary text-primary-foreground shadow-lg'
-                : 'bg-secondary/30 text-foreground hover:bg-secondary/50'
+                : 'bg-muted text-foreground hover:bg-muted/70'
             }`}
           >
             {property.name}

@@ -247,7 +247,7 @@ export function ConversationalOnboarding({ onComplete, onChange, initialData }: 
   const answeredQuestions = QUESTIONS.slice(0, Math.min(step, totalSteps))
 
   return (
-    <section className="h-full flex flex-col py-2 md:py-3 px-4 sm:px-6 lg:px-8 bg-foreground/5">
+    <section className="h-full flex flex-col py-2 md:py-3 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto w-full flex flex-col h-full">
         <div className="mb-2 shrink-0">
           <h2 className="text-lg md:text-xl font-bold text-foreground mb-0.5">
@@ -320,10 +320,10 @@ export function ConversationalOnboarding({ onComplete, onChange, initialData }: 
                         onClick={() => handleOptionClick(question, option.value)}
                         className={`w-full py-2.5 px-3.5 rounded-lg border-2 text-left text-sm font-medium transition-all ${
                           option.value === 'other'
-                            ? 'border-dashed border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-primary'
+                            ? 'border-dashed border-border bg-muted/50 text-muted-foreground hover:border-primary/50 hover:text-primary'
                             : isPending
                               ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border bg-background hover:border-primary/50 hover:bg-primary/5'
+                              : 'border-border bg-muted/50 hover:border-primary/50 hover:bg-primary/5'
                         }`}
                       >
                         {option.label}
@@ -373,7 +373,7 @@ export function ConversationalOnboarding({ onComplete, onChange, initialData }: 
           )}
 
           {isComplete && (
-            <Card className="w-full p-5 md:p-6 border-primary/30 bg-primary/5">
+            <Card className="w-full p-5 md:p-6">
               <h3 className="text-xl font-semibold text-foreground mb-2">All set</h3>
               <p className="text-sm text-muted-foreground mb-6">
                 We&apos;ve stored your answers. Tap any question above to change it.
